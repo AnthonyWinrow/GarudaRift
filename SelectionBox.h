@@ -1,20 +1,18 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "DynamicMeshActor.h"
+#include "GameFramework/Actor.h"
 #include "SelectionBox.generated.h"
 
 UCLASS()
-class GARUDARIFT_API ASelectionBox : public ADynamicMeshActor
+class GARUDARIFT_API ASelectionBox : public AActor
 {
 	GENERATED_BODY()
 	
 public:
 	ASelectionBox();
 
-	// Mesh component
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
-	UStaticMeshComponent* MeshComponent;
+private:
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* StaticMeshComponent;
 };
