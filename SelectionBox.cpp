@@ -1,27 +1,52 @@
 #include "E:/Unreal Projects/GarudaRift/Source/GarudaRift/ActorClasses/SelectionBox.h"
-#include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
-#include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/Engine/Classes/Components/StaticMeshComponent.h"
-#include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/Engine/Classes/Engine/StaticMesh.h"
+#include "UObject/ConstructorHelpers.h"
+#include "Engine/Classes/Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 
+// Sets default values
 ASelectionBox::ASelectionBox()
 {
-	// Set the actor to call tick every frame
+	// Log: Constructor Called
+	UE_LOG(LogTemp, Warning, TEXT("Mesh SelectionBox Constructor Called_selectionbox construct"));
+
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
-	// Create a static mesh component
+
+	// Create static mesh component
 	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	StaticMeshComponent->SetMobility(EComponentMobility::Movable);
 	SetRootComponent(StaticMeshComponent);
 
-	// Load a static mesh
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("StaticMesh'/Game/GarudaRift/Meshes/Architecture/VFX/SelectionVolume.SelectionVolume'"));
+	// Log: Static mesh created
+	UE_LOG(LogTemp, Warning, TEXT("StaticMesh Component Created_selectionbox construct"));
+
+	// Load static mesh
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/GarudaRift/Meshes/Architecture/VFX/SelectionVolume.SelectionVolume")); 
 	if (MeshAsset.Succeeded())
 	{
 		StaticMeshComponent->SetStaticMesh(MeshAsset.Object);
+
+		// Log: Mesh loaded successfully
+		UE_LOG(LogTemp, Warning, TEXT("StaticMesh Loaded Successfully_selectionbox construct"));
 	}
 	else
 	{
-		// Log message for debugging
-		UE_LOG(LogTemp, Warning, TEXT("Mesh Not Found"));
+		// Log: Mesh not found
+		UE_LOG(LogTemp, Warning, TEXT("StaticMesh Not Found_selectionbox construct"));
 	}
 }
+
+// Called when the game starts or when spawned
+void ASelectionBox::BeginPlay()
+{
+	Super::BeginPlay();
+	
+}
+
+// Called every frame
+void ASelectionBox::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
