@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/StaticMesh.h"
+#include "Components/StaticMeshComponent.h"
 #include "SelectionBox.generated.h"
 
 UCLASS()
@@ -20,7 +20,7 @@ public:
 
 	// Method to handle left clicking
 	UFUNCTION()
-	void LeftClick(const FVector& SpawnLocation);
+	void LeftClick(const FVector& ClickLocation);
 
 protected:
 	// Called when the game starts or when spawned
@@ -30,4 +30,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+private:
+	// Static mesh component
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* StaticMeshComponent;
 };
