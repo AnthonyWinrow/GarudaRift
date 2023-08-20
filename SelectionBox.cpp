@@ -12,7 +12,7 @@ ASelectionBox::ASelectionBox()
 	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 
 	// Set the default mesh
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Cube.Cube'"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("StaticMesh'/Game/GarudaRift/Meshes/Architecture/VFX/SelectionBox_garudarift.SelectionBox_garudarift'"));
 	if (MeshAsset.Succeeded())
 	{
 		StaticMeshComponent->SetStaticMesh(MeshAsset.Object);
@@ -46,4 +46,31 @@ void ASelectionBox::LeftClick(const FVector& ClickLocation)
 	GetWorld()->SpawnActor<ASelectionBox>(ASelectionBox::StaticClass(), ClickLocation, FRotator(0), SpawnParams);
 
 	UE_LOG(LogTemp, Log, TEXT("Mesh Spawned on LeftClick at Location: %s_selectionbox_leftclick"));
+}
+
+void ASelectionBox::DestroyMesh()
+{
+	// Check if static mesh component is still valid
+	if (this && !IsPendingKill())
+	{
+		if (StaticMeshComponent)
+		{
+			// Detach the static mesh before destroying it
+			StaticMeshComponent->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+			StaticMeshComponent->DestroyComponent();
+
+			// Debug log for successfully destroying the static mesh component
+			UE_LOG(LogTemp, Log, TEXT("StaticMesh Destruction = Success_selectionbox_destroymesh"));
+		}
+
+		// Destroy the actor itself
+		Destroy();
+
+		// Debug log for successful destruction of the actor
+		UE_LOG(LogTemp, Log, TEXT("SelectionBox Actor Destruction = Success_selectionbox_destroymesh"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("SelectionBox Actor is not Valid or Already Destroyed_selectionbox_destroymesh"));
+	}
 }
