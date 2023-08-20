@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SplineComponent.h"
 #include "SelectionBox.generated.h"
 
 UCLASS()
@@ -18,9 +19,8 @@ public:
 	UPROPERTY(EditAnywhere)
 	UStaticMeshComponent* Mesh;
 
-	// Method to handle left clicking
-	UFUNCTION()
-	void LeftClick(const FVector& ClickLocation);
+	// Method to destroy static mesh
+	void DestroyMesh();
 
 protected:
 	// Called when the game starts or when spawned
@@ -34,4 +34,10 @@ private:
 	// Static mesh component
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* StaticMeshComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
+	USplineComponent* WallSpline;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Points", meta = (AllowPrivateAccess = "true"))
+	TArray<UStaticMeshComponent*> ControlPointMeshes;
 };
