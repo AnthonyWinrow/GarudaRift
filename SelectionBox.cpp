@@ -34,7 +34,7 @@ ASelectionBox::ASelectionBox()
 		UStaticMeshComponent* ControlPointMesh = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("ControlPointMesh%d"), i)));
 		ControlPointMesh->SetupAttachment(RootComponent);
 		ControlPointMesh->SetStaticMesh(SphereMesh);
-		ControlPointMsesh->SetWorldlocation(WallSpline->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World));
+		ControlPointMesh->SetWorldLocation(WallSpline->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World));
 		ControlPointMeshes.Add(ControlPointMesh);
 	}
 
@@ -83,7 +83,7 @@ void ASelectionBox::DestroyMesh()
 	UE_LOG(LogTemp, Log, TEXT("DestroyMesh Called_selectionbox_destroymesh"));
 
 	// Check if static mesh component is still valid
-	if (this && !IsPendingKill())
+	if (IsValid(this))
 	{
 		if (StaticMeshComponent)
 		{
