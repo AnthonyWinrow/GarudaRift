@@ -13,9 +13,6 @@ UBuildMode::UBuildMode()
     bIsBuildModeActive = false;
     TurnSpeed = 20.0f;
     bHasUpdatedInitialCameraHeight = false;
-
-    // Create an instance of SelectionBox
-    SelectionBox = CreateDefaultSubobject<ASelectionBox>(TEXT("SelectionBox"));
 }
 
 void UBuildMode::UpdateCursorVisibility()
@@ -228,7 +225,15 @@ void UBuildMode::ActivateBuildMode()
 
 void UBuildMode::DeactivateBuildMode()
 {
+    UE_LOG(LogTemp, Log, TEXT("Deactivate BuildMode Function Called_buildmode_deactivatebuildmode"));
+
     bIsBuildModeActive = false;
+
+    // Call DestroyMesh from SelectionBox class
+    if (SelectionBox)
+    {
+        SelectionBox->DestroyMesh();
+    }
 }
 
 bool UBuildMode::IsBuildModeActive()
@@ -238,7 +243,15 @@ bool UBuildMode::IsBuildModeActive()
 
 void UBuildMode::LeftClick()
 {
-    UE_LOG(LogTemp, Warning, TEXT("LeftClick method called."));
+    UE_LOG(LogTemp, Warning, TEXT("LeftClick Method Called_buildmode_leftclick"));
+
+    // Check if there's already an instance of selectionbox
+    if (SelectionBox && !SelectionBox->IsPendingKill())
+    {
+        // If an instance already exists, do nothing
+        UE_LOG(LogTemp, Warning, TEXT("SelectionBox Instance Already Exists. SelectionBox Spawn = Request Rejected_buildmode_leftclick"));
+        return;
+    }
 
     // Get the player's viewpoint
     FVector ViewLocation;
@@ -267,8 +280,11 @@ void UBuildMode::LeftClick()
     {
         FVector ClickLocation = HitResult.Location;
 
-        // Update the selection box with the click location
-        // SelectionBox->CreateVolume(ClickLocation);      
+        // Spawn a new selection box actor at the click location
+        SelectionBox = GetWorld()->SpawnActor<ASelectionBox>(ASelectionBox::StaticClass(), ClickLocation, FRotator(0));
+
+        // Log the action
+        UE_LOG(LogTemp, Log, TEXT("SelectionBox Spawned at Location: %s_buildmode_leftclick"), *ClickLocation.ToString());
     }
 }
 
