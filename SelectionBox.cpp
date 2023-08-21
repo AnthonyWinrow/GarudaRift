@@ -42,13 +42,19 @@ ASelectionBox::ASelectionBox()
 	FVector MinExtent = BoundingBox.Min;
 	FVector MaxExtent = BoundingBox.Max;
 
+	// Log the bounding box extents
+	UE_LOG(LogTemp, Log, TEXT("BoundingBox MinExtent: %s, MaxExtent: %s_selectionbox_constructor"), *MinExtent.ToString(), *MaxExtent.ToString());
+
 	// Calculate the locations of the end faces
 	FVector EndFace1Location = FVector(MinExtent.X, (MinExtent.Y + MaxExtent.Y) / 2, (MinExtent.Z + MaxExtent.Z) / 2);
 	FVector EndFace2Location = FVector(MaxExtent.X, (MinExtent.Y + MaxExtent.Y) / 2, (MinExtent.Z + MaxExtent.Z) / 2);
 
-	// Add initial control points
+	// Add control points to the end face locations
 	WallSpline->AddSplinePoint(EndFace1Location, ESplineCoordinateSpace::Local);
 	WallSpline->AddSplinePoint(EndFace2Location, ESplineCoordinateSpace::Local);
+
+	// Log the end face locations
+	UE_LOG(LogTemp, Log, TEXT("EndFace1Location: %s, EndFace2Location: %s_selectionbox_constructor"), *EndFace1Location.ToString(), *EndFace2Location.ToString());
 
 	// Log the spline component initialization
 	UE_LOG(LogTemp, Log, TEXT("WallSpline Component Initialized_selectionbox_constructor"));
@@ -58,16 +64,25 @@ ASelectionBox::ASelectionBox()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
 	UStaticMesh* SphereMesh = SphereMeshAsset.Object;
 
+	// Get the right vector of the wall
+	FVector WallRightVector = StaticMeshComponent->GetRightVector();
+
 	// Create the control point visualizations
-	for (int i = 0; i < WallSpline->GetNumberOfSplinePoints(); ++i)
+	TArray<FVector> ControlPointLocations = { EndFace1Location, EndFace2Location };
+	for (int i = 0; i < ControlPointLocations.Num(); ++i)
 	{
 		UStaticMeshComponent* ControlPointMesh = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("ControlPointMesh%d"), i)));
 		ControlPointMesh->SetupAttachment(RootComponent);
 		ControlPointMesh->SetStaticMesh(SphereMesh);
-		ControlPointMesh->SetWorldLocation(WallSpline->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World));
+		ControlPointMesh->SetRelativeLocation(ControlPointLocations[i]);
+
+		// Set the rotation based on the wall's right vector
+		FRotator Rotation = WallRightVector.Rotation();
+
+		ControlPointMesh->SetRelativeRotation(Rotation);
 
 		// Set the mesh scale factor
-		FVector ScaleFactor = FVector(0.25f, 0.25f, 0.25f);
+		FVector ScaleFactor = FVector(0.1f, 0.1f, 0.1f);
 		ControlPointMesh->SetWorldScale3D(ScaleFactor);
 
 		ControlPointMeshes.Add(ControlPointMesh);
