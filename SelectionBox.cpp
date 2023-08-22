@@ -24,6 +24,10 @@ ASelectionBox::ASelectionBox()
 	// Attach mesh to root component
 	RootComponent = StaticMeshComponent;
 
+	// Verify Wall's Orientation (if StaticMeshComponent is valid)
+	UE_LOG(LogTemp, Log, TEXT("Wall Forward Vector_selectionbox_constructor: %s"), *StaticMeshComponent->GetForwardVector().ToString());
+	UE_LOG(LogTemp, Log, TEXT("Wall Right Vector_selectionbox_constructor: %s"), *StaticMeshComponent->GetRightVector().ToString());
+
 	UE_LOG(LogTemp, Log, TEXT(" Mesh Initialized in Constructor_selectionbox_constructor"));
 
 	// Create spline component
@@ -38,27 +42,11 @@ ASelectionBox::ASelectionBox()
 	// Get the bounding box of the static mesh
 	FBox BoundingBox = StaticMeshComponent->GetStaticMesh()->GetBoundingBox();
 
-	// Get the min and max extents of the bounding box
-	FVector MinExtent = BoundingBox.Min;
-	FVector MaxExtent = BoundingBox.Max;
-
-	// Log the bounding box extents
-	UE_LOG(LogTemp, Log, TEXT("BoundingBox MinExtent: %s, MaxExtent: %s_selectionbox_constructor"), *MinExtent.ToString(), *MaxExtent.ToString());
-
-	// Calculate the locations of the end faces
-	FVector EndFace1Location = FVector(MinExtent.X, (MinExtent.Y + MaxExtent.Y) / 2, (MinExtent.Z + MaxExtent.Z) / 2);
-	FVector EndFace2Location = FVector(MaxExtent.X, (MinExtent.Y + MaxExtent.Y) / 2, (MinExtent.Z + MaxExtent.Z) / 2);
-
-	// Add control points to the end face locations
-	WallSpline->AddSplinePoint(EndFace1Location, ESplineCoordinateSpace::Local);
-	WallSpline->AddSplinePoint(EndFace2Location, ESplineCoordinateSpace::Local);
-
-	// Log the end face locations
-	UE_LOG(LogTemp, Log, TEXT("EndFace1Location: %s, EndFace2Location: %s_selectionbox_constructor"), *EndFace1Location.ToString(), *EndFace2Location.ToString());
+	// Calculate the center of the wall
+	FVector Center = BoundingBox.GetCenter();
 
 	// Log the spline component initialization
 	UE_LOG(LogTemp, Log, TEXT("WallSpline Component Initialized_selectionbox_constructor"));
-	UE_LOG(LogTemp, Log, TEXT("Added Initial Control Points to WallSpline_selectionbox_constructor"));
 
 	// Find the control point mesh
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
@@ -67,19 +55,23 @@ ASelectionBox::ASelectionBox()
 	// Get the right vector of the wall
 	FVector WallRightVector = StaticMeshComponent->GetRightVector();
 
+	// Define the offset from the center to the left and right sides
+	float Offset = 15.f;
+
+	// Calculate left and right positions for the control points
+	FVector LeftPosition = Center - (WallRightVector * Offset);
+	FVector RightPosition = Center + (WallRightVector * Offset);
+
 	// Create the control point visualizations
-	TArray<FVector> ControlPointLocations = { EndFace1Location, EndFace2Location };
+	TArray<FVector> ControlPointLocations = { LeftPosition, RightPosition };
 	for (int i = 0; i < ControlPointLocations.Num(); ++i)
 	{
 		UStaticMeshComponent* ControlPointMesh = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("ControlPointMesh%d"), i)));
 		ControlPointMesh->SetupAttachment(RootComponent);
 		ControlPointMesh->SetStaticMesh(SphereMesh);
+
+		// Set the relative location to the left or right position
 		ControlPointMesh->SetRelativeLocation(ControlPointLocations[i]);
-
-		// Set the rotation based on the wall's right vector
-		FRotator Rotation = WallRightVector.Rotation();
-
-		ControlPointMesh->SetRelativeRotation(Rotation);
 
 		// Set the mesh scale factor
 		FVector ScaleFactor = FVector(0.1f, 0.1f, 0.1f);
@@ -104,6 +96,27 @@ void ASelectionBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ASelectionBox::ControlPointDrag(FVector DragLocation)
+{
+	// Determine which control point was dragged
+	UStaticMeshComponent* DraggedControlPoint = GetDraggedControlPoint(DragLocation);
+	if (DraggedControlPoint)
+	{
+		// Update the position of the dragged control point
+		DraggedControlPoint->SetRelativeLocation(DragLocation);
+
+		// Log the action
+		UE_LOG(LogTemp, Log, TEXT("Control Point Dragged to Location_selectionbox_controlpointdrag: %s"), *DragLocation.ToString());
+
+		return DraggedControlPoint;
+	}
+}
+
+UStaticMeshComponent* ASelectionBox::GetDraggedControlPoint(FVector DragLocation)
+{
+	return nullptr;
 }
 
 void ASelectionBox::DestroyMesh()
