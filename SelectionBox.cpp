@@ -98,25 +98,74 @@ void ASelectionBox::Tick(float DeltaTime)
 
 }
 
-void ASelectionBox::ControlPointDrag(FVector DragLocation)
+UStaticMeshComponent* ASelectionBox::GetDraggedControlPoint(FVector2D InitialLeftClickLocation, FVector DragLocation)
 {
-	// Determine which control point was dragged
-	UStaticMeshComponent* DraggedControlPoint = GetDraggedControlPoint(DragLocation);
-	if (DraggedControlPoint)
-	{
-		// Update the position of the dragged control point
-		DraggedControlPoint->SetRelativeLocation(DragLocation);
+	// Logging: Debug log for entering the method
+	UE_LOG(LogTemp, Log, TEXT("GetDraggedControlPoint Called_selectionbox_getdraggedcontrolpoint"));
 
-		// Log the action
-		UE_LOG(LogTemp, Log, TEXT("Control Point Dragged to Location_selectionbox_controlpointdrag: %s"), *DragLocation.ToString());
+	// Logging: Debug log for tracking initial left click location
+	UE_LOG(LogTemp, Log, TEXT("Initial Left Click Location_selectionbox_getdraggedcontrolpoint: %s"), *InitialLeftClickLocation.ToString());
 
-		return DraggedControlPoint;
-	}
+	UStaticMeshComponent* draggedControlPoint = nullptr;
+
+	// Logging: Debug log for control point dragging
+	UE_LOG(LogTemp, Log, TEXT("GetDraggedControlPoint Called With Location_selectionbox_getdraggedcontrolpoint: %s"), *DragLocation.ToString());
+
+	return draggedControlPoint;
 }
 
-UStaticMeshComponent* ASelectionBox::GetDraggedControlPoint(FVector DragLocation)
+void ASelectionBox::ControlPointDrag(FVector DragLocation)
 {
-	return nullptr;
+	// Logging: Debug log for entering ControlPointDrag method
+	UE_LOG(LogTemp, Log, TEXT("ControlPointDrag Called_selectionbox_controlpointdrag"));
+
+	// Logging: Debug log for tracking initial click location
+	UE_LOG(LogTemp, Log, TEXT("Initial Left Click Location_selectionbox_controlpointdrag"));
+
+	// Get the dragged control point
+	UStaticMeshComponent* draggedControlPoint = GetDraggedControlPoint(InitialLeftClickLocation, DragLocation);
+
+	// If a control point was dragged, update its position
+	if (draggedControlPoint)
+	{
+		// Calculate the new position based on the dragged location and initial click location
+		FVector newPosition = CalculateNewPostion(InitialLeftClickLocation, DragLocation);
+
+		// Update the control point's position
+		draggedControlPoint->SetWorldLocation(newPosition);
+	}
+
+	// Logging: Debug log for control point dragging
+	UE_LOG(LogTemp, Log, TEXT("ControlPointDrag called with location_selectionbox_controlpointdrag: %s"), *DragLocation.ToString());
+}
+
+FVector ASelectionBox::CalculateNewPosition(FVector2D InitialLeftClickLocation, FVector DragLocation)
+{
+	// Convert InitialLeftClickLocation to world space
+	FVector worldInitialLocation;
+	APlayerController* playerController = GetWorld()->GetFirstPlayerController();
+	if (playerController)
+	{
+		FVector worldDirection;
+		playerController->DeprojectScreenPositionToWorld(InitialLeftClickLocation.X, InitialLeftClickLocation.Y, worldInitialLeftClickLocation, worldDirection);
+	}
+
+	// Calculate the drag delta
+	FVector dragDelta = DragLocation - worldInitialLocation;
+
+	// Get the original location of the control point
+	UStaticMeshComponent* draggedControlPoint = GetDraggedControlPoint(InitialLeftClickLocation, DragLocation);
+	if (!draggedControlPoint) return FVector::ZerorVector;
+
+	FVector originalPosition = draggedControlPoint->GetComponentLocation();
+
+	// Apply the drag delta to the original position
+	FVector newPosition = originalPosition + dragDelta;
+
+	// Logging: Debug log for tracking new position
+	UE_LOG(LogTemp, Log, TEXT("New Position Calculated_selectionbox_calculatenewposition: %s"), *newPosition.ToString());
+
+	return newPosition;
 }
 
 void ASelectionBox::DestroyMesh()
