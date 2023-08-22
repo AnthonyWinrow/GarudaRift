@@ -210,12 +210,26 @@ void AOrion::RightMouseReleased()
 
 void AOrion::LeftMousePressed()
 {
+    // Logging: Debug log for entering the LeftMousePressed method
+    UE_LOG(LogTemp, Log, TEXt("LeftMousePressed Called_orion_leftmousepressed"));
+
     bIsLeftMousePressed = true;
+
+    // Get the current mouse position and store it in a variable
+    GetWorld()->GetFirstPlayerController()->GetMousePosition(InitialLeftClickLocation.X, InitialLeftClickLocation.Y);
+
+    // Logging: Debug log for storing initial left click location
+    UE_LOG(LogTemp, Log, TEXT("Initial Left Click Location_orion_leftmousepressed: X=%f, Y=%f"), InitialLeftClickLocation.X, InitialLeftClickLocation.Y);
     
     if (BuildMode && BuildMode->IsBuildModeActive())
     {
         BuildMode->LeftClick();
+
+        BuildMode->LeftMouseDrag(InitialLeftClickLocation);
     }
+
+    // Logging: Debug log for exiting left mouse pressed method
+    UE_LOG(LogTemp, Log, TEXT("LeftMousePressed Exited_orion_leftmousepressed"));
 }
 
 void AOrion::LeftMouseReleased()
