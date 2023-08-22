@@ -76,6 +76,7 @@ public:
     float TimeSinceLeftMousePressed;
     bool bIsLeftMouseButtonHeld;
     bool bIsLeftMousePressed;
+    FVector2D InitialLeftClickLocation;
 
     // Handles FreeLookMode
     void ActivateFreeLookMode();
