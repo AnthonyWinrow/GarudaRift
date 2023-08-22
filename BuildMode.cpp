@@ -246,7 +246,7 @@ void UBuildMode::LeftClick()
     UE_LOG(LogTemp, Warning, TEXT("LeftClick Method Called_buildmode_leftclick"));
 
     // Check if there's already an instance of selectionbox
-    if (SelectionBox && !SelectionBox->IsPendingKill())
+    if (IsValid(SelectionBox))
     {
         // If an instance already exists, do nothing
         UE_LOG(LogTemp, Warning, TEXT("SelectionBox Instance Already Exists. SelectionBox Spawn = Request Rejected_buildmode_leftclick"));
@@ -290,5 +290,38 @@ void UBuildMode::LeftClick()
 
 void UBuildMode::LeftMouseDrag()
 {
+    // Get player viewpoint
+    FVector ViewLocation;
+    FRotator ViewRotation;
+    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+    PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
 
+    // Get mouse position
+    float MouseX, MouseY;
+    PlayerController->GetMousePosition(MouseX, MouseY);
+
+    // Deproject mouse position to world space
+    FVector WorldDirection;
+    FVector StartLocation;
+    PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, StartLocation, WorldDirection);
+
+    // Calculate end location
+    float RaycastDistance = 2000.0f;
+    FVector EndLocation = StartLocation + (WorldDirection * RaycastDistance);
+
+    // Raycast to detect where you've dragged
+    FHitResult HitResult;
+    bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility);
+
+    UE_LOG(LogTemp, Log, TEXT("Raycast Start: %s, End: %s_buildmode_leftmousedrag"), *StartLocation.ToString(), *EndLocation.ToString());
+
+    if (bHit)
+    {
+        ASelectionBox* SelectionBoxActor = Cast<ASelectionBox>(HitResult.Actor);
+        if (SelectionBoxActor)
+        {
+            FVector DragLocation = HitResult.Location;
+            SelectionBox->ControlPointDrag(DragLocation);
+        }
+    }
 }
