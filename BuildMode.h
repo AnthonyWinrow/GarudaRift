@@ -26,7 +26,7 @@ public:
     void Zoom(float Value);
 
     // Function Methods
-    void LeftMouseDrag();
+    void LeftMouseDrag(FVector 2D InitialLeftClickLocation);
     void LeftClick();
 
     // Indicates whether build mode is active
