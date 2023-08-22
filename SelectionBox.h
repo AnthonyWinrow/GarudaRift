@@ -30,6 +30,11 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	// Handles control point dragging
+	void ControlPointDrag(FVector DragLocation);
+
+	UStaticMeshComponent* GetDraggedControlPoint(FVector DragLocation);
+
 private:
 	// Static mesh component
 	UPROPERTY(VisibleAnywhere)
