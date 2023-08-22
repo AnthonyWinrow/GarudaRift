@@ -290,38 +290,43 @@ void UBuildMode::LeftClick()
 
 void UBuildMode::LeftMouseDrag()
 {
-    // Get player viewpoint
-    FVector ViewLocation;
-    FRotator ViewRotation;
-    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-    PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+    // Logging: Debug log for entering left mouse drag method
+    UE_LOG(LogTemp, Log, TEXT("LeftMouseDrag Called_buildmode_leftmousedrag"));
 
-    // Get mouse position
-    float MouseX, MouseY;
-    PlayerController->GetMousePosition(MouseX, MouseY);
+    // Get current mouse location
+    FVector2D MousePosition;
+    GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
 
-    // Deproject mouse position to world space
-    FVector WorldDirection;
-    FVector StartLocation;
-    PlayerController->DeprojectScreenPositionToWorld(MouseX, MouseY, StartLocation, WorldDirection);
+    // Convert the mouse position to a world space ray
+    FVector worldLocation, worldDirection;
+    GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePosition.X, mousePosition.Y, worldLocation, worldDirection);
 
-    // Calculate end location
-    float RaycastDistance = 2000.0f;
-    FVector EndLocation = StartLocation + (WorldDirection * RaycastDistance);
+    // Perform a raycast to detect what was clicked
+    FHitResult hitResult;
+    FVector start = worldLocation;
+    FVector end = ((worldDirection * 200.0f) + worldLocation);
+    FCollisionQueryParams collisionParams;
 
-    // Raycast to detect where you've dragged
-    FHitResult HitResult;
-    bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility);
-
-    UE_LOG(LogTemp, Log, TEXT("Raycast Start: %s, End: %s_buildmode_leftmousedrag"), *StartLocation.ToString(), *EndLocation.ToString());
-
-    if (bHit)
+    // Check if the raycast hit something
+    if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Visibility, collisionParams))
     {
-        ASelectionBox* SelectionBoxActor = Cast<ASelectionBox>(HitResult.Actor);
-        if (SelectionBoxActor)
+        // Check if a control point was hit
+        ASelectionBox* selectionBox = Cast<ASelectionBox>(hitResult.GetActor());
+        if (selectionBox)
         {
-            FVector DragLocation = HitResult.Location;
-            SelectionBox->ControlPointDrag(DragLocation);
+            // Calculate drag location based on hit result
+            FVector dragLocation = hitResult.Location;
+
+            // Get the dragged control point from the selection box
+            UStaticMeshComponent* draggedControlPoint = selectionBox->GetDraggedControlPoint(dragLocation);
+
+            // If a control point was dragged, update its position
+            if (draggedControlPoint)
+            {
+                selectionBox->ControlPointDrag(dragLocation);
+            }
         }
     }
+
+    UE_LOG(LogTemp, Log, TEXT("LefMouseDrag Exited_buildmode_leftmousedrag"));
 }
