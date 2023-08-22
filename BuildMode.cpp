@@ -288,13 +288,16 @@ void UBuildMode::LeftClick()
     }
 }
 
-void UBuildMode::LeftMouseDrag()
+void UBuildMode::LeftMouseDrag(FVector2D InitialLeftClickLocation)
 {
     // Logging: Debug log for entering left mouse drag method
     UE_LOG(LogTemp, Log, TEXT("LeftMouseDrag Called_buildmode_leftmousedrag"));
 
+    // Logging: Debug log for tracking the initial left click location
+    UE_LOG(LogTemp, Log, TEXt("Initial Left Click Location_buildmode_leftmousedrag: %s"), *InitialLeftClickLocation.ToString());
+
     // Get current mouse location
-    FVector2D MousePosition;
+    FVector2D mousePosition;
     GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
 
     // Convert the mouse position to a world space ray
@@ -314,6 +317,8 @@ void UBuildMode::LeftMouseDrag()
         ASelectionBox* selectionBox = Cast<ASelectionBox>(hitResult.GetActor());
         if (selectionBox)
         {
+            selectionBox->ControlPointDrag(InitialLeftClickLocation, dragLocation);
+
             // Calculate drag location based on hit result
             FVector dragLocation = hitResult.Location;
 
@@ -328,5 +333,5 @@ void UBuildMode::LeftMouseDrag()
         }
     }
 
-    UE_LOG(LogTemp, Log, TEXT("LefMouseDrag Exited_buildmode_leftmousedrag"));
+    UE_LOG(LogTemp, Log, TEXT("LeftMouseDrag Exited_buildmode_leftmousedrag"));
 }
