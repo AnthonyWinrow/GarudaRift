@@ -114,7 +114,7 @@ UStaticMeshComponent* ASelectionBox::GetDraggedControlPoint(FVector2D InitialLef
 	return draggedControlPoint;
 }
 
-void ASelectionBox::ControlPointDrag(FVector DragLocation)
+void ASelectionBox::ControlPointDrag(FVector2D InitialLeftClickLocation, FVector DragLocation)
 {
 	// Logging: Debug log for entering ControlPointDrag method
 	UE_LOG(LogTemp, Log, TEXT("ControlPointDrag Called_selectionbox_controlpointdrag"));
