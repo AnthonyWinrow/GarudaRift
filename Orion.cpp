@@ -79,12 +79,17 @@ void AOrion::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    FVector2D CurrentMousePosition;
+    FVector2D MouseDelta;
+    FVector2D dragDelta;
+    FVector2D mousePositionTick;
+
     // Check if left mouse button is pressed
     if (bIsLeftMousePressed)
     {
         // Get current mouse location
         FVector2D mousePosition;
-        GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
+        GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePositionTick.Y);
 
         // Calculate the delta between the current and initial mouse positions
         FVector2D Mousedelta = CurrentMousePosition - InitialLeftClickLocation;
@@ -96,12 +101,12 @@ void AOrion::Tick(float DeltaTime)
         UpdateControlPointPosition(MouseDelta);
 
         // Logging: Debug log for updating control point position
-        UE_LOGI(LogTemp, Log, TEXT("Control Point Update_orion_tick"));
+        UE_LOG(LogTemp, Log, TEXT("Control Point Update_orion_tick"));
     }
 
     // Convert the mouse position to a world space ray
     FVector worldLocation, worldDirection;
-    GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePosition.X, mousePosition.Y, worldLocation, worldDirection);
+    GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePositionTick.X, mousePositionTick.Y, worldLocation, worldDirection);
 
     // Perform raycast to detect what was hovered
     FHitResult hitResult;
@@ -412,6 +417,31 @@ void AOrion::ExitBuildMode()
     SkeletalMeshComponent->SetVisibility(true);
 
     bShouldReattachCamera = true;
+}
+
+void AOrion::UpdateControlPointPosition(FVector2D MouseDelta)
+{
+    // Iterate through the control point meshes
+    for (UStaticMeshComponents* ControlPointMesh : ControlPointMeshes)
+    {
+        if (ControlPointMesh)
+        {
+            // Get current world location of control point
+            FVector CurrentLocation = ControlPointMesh->GetComponentLocation();
+
+            // Convert 2D mouse delta to 3D offset
+            FVector Offset = FVector(MouseDelta.X, MouseDelta.Y, 0.0f);
+
+            // Apply the offset to the control mesh
+            FVector NewLocation = CurrentLocation + Offset;
+
+            // Set the new world location of the control point
+            SelectionBox->ControlPointMesh->SetWorldLocation(NewLocation);
+
+            // Logging: Debug log for updating control point position
+            UE_LOG(LogTemp, Log, TEXT("Control Point Update_orion_updatecontrolpointposition: X=%f, Z=%f"), NewLocation.X, NewLocation.Y, NewLocation.Z);
+        }
+    }
 }
 
 void AOrion::MoveForward(float Value)
