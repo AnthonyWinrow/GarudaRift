@@ -79,34 +79,13 @@ void AOrion::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    FVector2D CurrentMousePosition;
-    FVector2D MouseDelta;
-    FVector2D dragDelta;
-    FVector2D mousePositionTick;
-
-    // Check if left mouse button is pressed
-    if (bIsLeftMousePressed)
-    {
-        // Get current mouse location
-        FVector2D mousePosition;
-        GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePositionTick.Y);
-
-        // Calculate the delta between the current and initial mouse positions
-        FVector2D Mousedelta = CurrentMousePosition - InitialLeftClickLocation;
-
-        // Logging: Debug log for mouse delta
-        UE_LOG(LogTemp, Log, TEXT("Mouse Delta_orion_tick: X=%f, Y=%f"), MouseDelta.X, MouseDelta.Y);
-
-        // Update control point position based on mouse delta
-        UpdateControlPointPosition(MouseDelta);
-
-        // Logging: Debug log for updating control point position
-        UE_LOG(LogTemp, Log, TEXT("Control Point Update_orion_tick"));
-    }
+    // Get current mouse location
+    FVector2D mousePosition;
+    GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
 
     // Convert the mouse position to a world space ray
     FVector worldLocation, worldDirection;
-    GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePositionTick.X, mousePositionTick.Y, worldLocation, worldDirection);
+    GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePosition.X, mousePosition.Y, worldLocation, worldDirection);
 
     // Perform raycast to detect what was hovered
     FHitResult hitResult;
@@ -120,48 +99,47 @@ void AOrion::Tick(float DeltaTime)
         // Logging: Debug log for hitting something
         UE_LOG(LogTemp, Log, TEXT("Raycast Hit Something_orion_tick: %s"), *hitResult.GetActor()->GetName());
 
-        // Check if in build mode and left mouse button is held
-        if (BuildMode && BuildMode->IsBuildModeActive() && bIsLeftMousePressed)
+        // Get the hit component
+        UPrimitiveComponent* HitComponent = hitResult.GetComponent();
+
+        // Check if the hit component is valid and has the ControlPoint tag
+        if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
         {
-           // Get hit component
-           UPrimitiveComponent* HitComponent = hitResult.GetComponent();
-           
-           // Check if the hit component is valid and has the ControlPoint tag
-           if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
-           {
-               // Calculate dragging based on hit result
-               FVector dragLocation = hitResult.Location;
+            // Logging: Debug log for hovering over over a control point mesh
+            UE_LOG(LogTemp, Log, TEXT("Raycast Hit Control Point Mesh_orion_tick: %s"), *HitComponent->GetName());
 
-               // Convert the 2D drag delta to a 3D offset
-               FVector dragOffset = FVector(dragDelta.X, dragDelta.Y, 0.0f);
-
-               // Apply the offset to the control mesh
-               HitComponent->SetWorldLocation(dragLocation + dragOffset);
-
-               // Logging: Debug log for dragging the control point mesh
-               UE_LOG(LogTemp, Log, TEXT("Dragging Control Point Mesh_orion_tick: %s"), *HitComponent->GetName());
-
-               // Change the cursor to a hand
-               GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Hand;
-           }
-           else
-           {
-               // Logging: Debug log for missing ControlPointTag
-               UE_LOG(LogTemp, Error, TEXT("Hit Component does not control the ControlPoint Tag_orion_tick"));
-               // Revert the cursor back to default state
-               GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Default;
-           }
+            // Change the cursor to a hand
+            GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Hand;
         }
         else
         {
-            // Logging: Debug log for drag conditions not met
-            UE_LOG(LogTemp, Error, TEXT("Drag Conditions Not Met_orion_tick: BuildMode: %d, IsBuildModeActive: %d, bIsLeftMousePressed: %d"), BuildMode != nullptr, BuildMode ? BuildMode->IsBuildModeActive() : false, bIsLeftMousePressed);
+            // Logging: Debug log for hit component being null or not having the control point tag
+            UE_LOG(LogTemp, Error, TEXT("Hit Component is Null or Does Not Have ControlPoint Tag_orion_tick"));
+
+            // Revert the cursror back to default state
+            GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Default;
+        }
+    }
+
+    if (bIsLeftMousePressed)
+    {
+        TimeSinceLeftMousePressed += DeltaTime;
+
+        if (TimeSinceLeftMousePressed >= 3.0f)
+        {
+            // Handle left mouse being held for at least 3 seconds
+            bIsLeftMouseButtonHeld = true;
+            if (BuildMode && BuildMode->IsBuildModeActive())
+            {
+                BuildMode->LeftMouseDrag(InitialLeftClickLocation);
+            }
         }
     }
     else
     {
-        // Logging: Debug log for raycast miss
-        UE_LOG(LogTemp, Error, TEXT("Raycast Did Not Hit Anything_orion_tick"));
+        // Reset the variables
+        TimeSinceLeftMousePressed = 0.0f;
+        bIsLeftMouseButtonHeld = false;
     }
 
     if (bIsCameraMoving)
@@ -288,6 +266,8 @@ void AOrion::LeftMousePressed()
     if (BuildMode && BuildMode->IsBuildModeActive())
     {
         BuildMode->LeftClick();
+
+        BuildMode->LeftMouseDrag(InitialLeftClickLocation);
     }
 
     // Logging: Debug log for exiting left mouse pressed method
@@ -417,31 +397,6 @@ void AOrion::ExitBuildMode()
     SkeletalMeshComponent->SetVisibility(true);
 
     bShouldReattachCamera = true;
-}
-
-void AOrion::UpdateControlPointPosition(FVector2D MouseDelta)
-{
-    // Iterate through the control point meshes
-    for (UStaticMeshComponents* ControlPointMesh : ControlPointMeshes)
-    {
-        if (ControlPointMesh)
-        {
-            // Get current world location of control point
-            FVector CurrentLocation = ControlPointMesh->GetComponentLocation();
-
-            // Convert 2D mouse delta to 3D offset
-            FVector Offset = FVector(MouseDelta.X, MouseDelta.Y, 0.0f);
-
-            // Apply the offset to the control mesh
-            FVector NewLocation = CurrentLocation + Offset;
-
-            // Set the new world location of the control point
-            SelectionBox->ControlPointMesh->SetWorldLocation(NewLocation);
-
-            // Logging: Debug log for updating control point position
-            UE_LOG(LogTemp, Log, TEXT("Control Point Update_orion_updatecontrolpointposition: X=%f, Z=%f"), NewLocation.X, NewLocation.Y, NewLocation.Z);
-        }
-    }
 }
 
 void AOrion::MoveForward(float Value)
