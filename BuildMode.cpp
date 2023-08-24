@@ -326,13 +326,20 @@ void UBuildMode::LeftMouseDrag(FVector2D InitialLeftClickLocation)
             // Check if the hit component is valid and has the ControlPoint tag
             if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
             {
-                //Logging: Debug log for successfully hovering over a control point mesh
-                UE_LOG(LogTemp, Log, TEXT("Raycast Hit Control Point Mesh_buildmode_leftmousedrag: %s"), *HitComponent->GetName());
-
                 // Calculate dragging based on hit result
                 FVector dragLocation = hitResult.Location;
 
-                // TODO: Implement logic for dragging the control point mesh
+               // Calculate the difference between the current mouse position and the initial left click location
+                FVector2D dragDelta = mousePosition - InitialLeftClickLocation;
+
+                // Convert the 2D drag delta to a 3D offset
+                FVector dragOffset = FVector(dragDelta.X, dragDelta.Y, 0.0f);
+
+                // Apply the offset to the control mesh
+                HitComponent->SetWorldLocation(dragLocation + dragOffset);
+
+                // Logging: Debug log for dragging the control point mesh
+                UE_LOG(LogTemp, Log, TEXT("Dragging Control Point Mesh_buildmode_leftmousedrag: %s"), *HitComponent->GetName());
             }
             else
             {
