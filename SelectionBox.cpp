@@ -107,16 +107,6 @@ void ASelectionBox::Tick(float DeltaTime)
 
 }
 
-FVector ASelectionBox::CalculateNewPosition(FVector2D InitialLeftClickLocation, FVector DragLocation)
-{
-
-}
-
-void ASelectionBox::ControlPointDrag(FVector2D InitialLeftClickLocation, FVector DragLocation)
-{
-
-}
-
 void ASelectionBox::DestroyMesh()
 {
 	// Check if static mesh component is null
