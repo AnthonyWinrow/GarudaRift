@@ -79,25 +79,71 @@ void AOrion::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (bIsLeftMousePressed)
-    {
-        TimeSinceLeftMousePressed += DeltaTime;
+    // Get current mouse location
+    FVector2D mousePosition;
+    GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
 
-        if (TimeSinceLeftMousePressed >= 3.0f)
+    // Convert the mouse position to a world space ray
+    FVector worldLocation, worldDirection;
+    GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePosition.X, mousePosition.Y, worldLocation, worldDirection);
+
+    // Perform raycast to detect what was hovered
+    FHitResult hitResult;
+    FVector start = worldLocation;
+    FVector end = ((worldDirection * 2000.0f) + worldLocation);
+    FCollisionQueryParams collisionParams;
+
+    // Check if raycast hit something
+    if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Visibility, collisionParams))
+    {
+        // Logging: Debug log for hitting something
+        UE_LOG(LogTemp, Log, TEXT("Raycast Hit Something_orion_tick: %s"), *hitResult.GetActor()->GetName());
+
+        // Check if in build mode and left mouse button is held
+        if (BuildMode && BuildMode->IsBuildModeActive() && bIsLeftMousePressed)
         {
-            // Handle left mouse being held for at least 3 seconds
-            bIsLeftMouseButtonHeld = true;
-            if (BuildMode && BuildMode->IsBuildModeActive())
-            {
-                BuildMode->LeftMouseDrag();
-            }
+           // Get hit component
+           UPrimitiveComponent* HitComponent = hitResult.GetComponent();
+           
+           // Check if the hit component is valid and has the ControlPoint tag
+           if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
+           {
+               // Calculate dragging based on hit result
+               FVector dragLocation = hitResult.Location;
+
+               // Calculate the difference between the current mouse position and the initial left click location
+               FVector2D dragDelta = mousePosition - InitialLeftClickLocation;
+
+               // Convert the 2D drag delta to a 3D offset
+               FVector dragOffset = FVector(dragDelta.X, dragDelta.Y, 0.0f);
+
+               // Apply the offset to the control mesh
+               HitComponent->SetWorldLocation(dragLocation + dragOffset);
+
+               // Logging: Debug log for dragging the control point mesh
+               UE_LOG(LogTemp, Log, TEXT("Dragging Control Point Mesh_orion_tick: %s"), *HitComponent->GetName());
+
+               // Change the cursor to a hand
+               GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Hand;
+           }
+           else
+           {
+               // Logging: Debug log for missing ControlPointTag
+               UE_LOG(LogTemp, Error, TEXT("Hit Component does not control the ControlPoint Tag_orion_tick"));
+               // Revert the cursor back to default state
+               GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Default;
+           }
+        }
+        else
+        {
+            // Logging: Debug log for drag conditions not met
+            UE_LOG(LogTemp, Error, TEXT("Drag Conditions Not Met_orion_tick: BuildMode: %d, IsBuildModeActive: %d, bIsLeftMousePressed: %d"), BuildMode != nullptr, BuildMode ? BuildMode->IsBuildModeActive() : false, bIsLeftMousePressed);
         }
     }
     else
     {
-        // Reset the variables
-        TimeSinceLeftMousePressed = 0.0f;
-        bIsLeftMouseButtonHeld = false;
+        // Logging: Debug log for raycast miss
+        UE_LOG(LogTemp, Error, TEXT("Raycast Did Not Hit Anything_orion_tick"));
     }
 
     if (bIsCameraMoving)
@@ -211,7 +257,7 @@ void AOrion::RightMouseReleased()
 void AOrion::LeftMousePressed()
 {
     // Logging: Debug log for entering the LeftMousePressed method
-    UE_LOG(LogTemp, Log, TEXt("LeftMousePressed Called_orion_leftmousepressed"));
+    UE_LOG(LogTemp, Log, TEXT("LeftMousePressed Called_orion_leftmousepressed"));
 
     bIsLeftMousePressed = true;
 
@@ -224,8 +270,6 @@ void AOrion::LeftMousePressed()
     if (BuildMode && BuildMode->IsBuildModeActive())
     {
         BuildMode->LeftClick();
-
-        BuildMode->LeftMouseDrag(InitialLeftClickLocation);
     }
 
     // Logging: Debug log for exiting left mouse pressed method
