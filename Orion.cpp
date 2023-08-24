@@ -79,9 +79,25 @@ void AOrion::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // Get current mouse location
-    FVector2D mousePosition;
-    GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
+    // Check if left mouse button is pressed
+    if (bIsLeftMousePressed)
+    {
+        // Get current mouse location
+        FVector2D mousePosition;
+        GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
+
+        // Calculate the delta between the current and initial mouse positions
+        FVector2D Mousedelta = CurrentMousePosition - InitialLeftClickLocation;
+
+        // Logging: Debug log for mouse delta
+        UE_LOG(LogTemp, Log, TEXT("Mouse Delta_orion_tick: X=%f, Y=%f"), MouseDelta.X, MouseDelta.Y);
+
+        // Update control point position based on mouse delta
+        UpdateControlPointPosition(MouseDelta);
+
+        // Logging: Debug log for updating control point position
+        UE_LOGI(LogTemp, Log, TEXT("Control Point Update_orion_tick"));
+    }
 
     // Convert the mouse position to a world space ray
     FVector worldLocation, worldDirection;
@@ -110,9 +126,6 @@ void AOrion::Tick(float DeltaTime)
            {
                // Calculate dragging based on hit result
                FVector dragLocation = hitResult.Location;
-
-               // Calculate the difference between the current mouse position and the initial left click location
-               FVector2D dragDelta = mousePosition - InitialLeftClickLocation;
 
                // Convert the 2D drag delta to a 3D offset
                FVector dragOffset = FVector(dragDelta.X, dragDelta.Y, 0.0f);
