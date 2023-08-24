@@ -313,9 +313,37 @@ void UBuildMode::LeftMouseDrag(FVector2D InitialLeftClickLocation)
     // Check if the raycast hit something
     if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Visibility, collisionParams))
     {
-        // Logging: Debug log for raycast hitting something
-        UE_LOG(LogTemp, Log, TEXT("Raycast Hit Something_buildmode_leftmousedrag: %s"), *hitResult.GetActor()->GetName());
+        // Check if the hit actor is valid
+        AActor* HitActor = hitResult.GetActor();
+        if (HitActor != nullptr)
+        {
+            // Logging: Debug log for raycast hitting something
+            UE_LOG(LogTemp, Log, TEXT("Raycast Hit Something_buildmode_leftmousedrag: %s"), *hitResult.GetActor()->GetName());
 
-        // Calculate drag location based on hit result
-        FVector dragLocation = hitResult.Location;
+            // Get the hit component
+            UPrimitiveComponent* HitComponent = hitResult.GetComponent();
+
+            // Check if the hit component is valid and has the ControlPoint tag
+            if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
+            {
+                //Logging: Debug log for successfully hovering over a control point mesh
+                UE_LOG(LogTemp, Log, TEXT("Raycast Hit Control Point Mesh_buildmode_leftmousedrag: %s"), *HitComponent->GetName());
+
+                // Calculate dragging based on hit result
+                FVector dragLocation = hitResult.Location;
+
+                // TODO: Implement logic for dragging the control point mesh
+            }
+            else
+            {
+                // Logging: Debug log for hit component being null or not having the control point tag
+                UE_LOG(LogTemp, Error, TEXT("Hit Component is NULL or Does Not Have ControlPoint Tag_buildmode_leftmousedrag"));
+            }
+        }
+        else
+        {
+            // Logging: Debug log for hit actor being null
+            UE_LOG(LogTemp, Error, TEXT("Hit Actor is NULL_buildmode_leftmousedrag"));
+        }
+    }   
 }
