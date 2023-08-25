@@ -79,14 +79,10 @@ ASelectionBox::ASelectionBox()
 		FVector ScaleFactor = FVector(0.1f, 0.1f, 0.1f);
 		ControlPointMesh->SetWorldScale3D(ScaleFactor);
 
+		// Add tagging to identify the meshes as control point meshes
+		ControlPointMesh->ComponentTags.Add(FName("ControlPoint"));
+
 		ControlPointMeshes.Add(ControlPointMesh);
-
-		// Calculate the offset between the control point and the mesh
-		FVector meshPosition = FVector::ZeroVector;
-		FVector offset = controlPointPosition - meshPosition;
-
-		// Store the offset
-		ControlPointOffsets.Add(offset);
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Control Points Initialized and Visible with Default Sphere Mesh_selectionbox_constructor"));
@@ -105,6 +101,35 @@ void ASelectionBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Declare and initialize current mouse position variable
+	FVector2D currentMousePosition = FVector2D(0, 0);
+
+	// Declare control point variable as a static mesh component
+	UStaticMeshComponent* ControlPoint = nullptr;
+
+	// Check if a control point is selected for dragging
+	if (bIsControlPointSelected && ControlPoint)
+	{
+		// Get current mouse position
+		FVector2D CurrentMousePostion;
+		GetWorld()->GetFirstPlayerController()->GetMousePosition(currentMousePosition.X, currentMousePosition.Y);
+
+		// Convert mouse position to world coordinates
+		FVector worldLocation, worldDirection;
+		GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(currentMousePosition.X, currentMousePosition.Y, worldLocation, worldDirection);
+
+		// Update the control point's position to follow the mouse
+		FVector NewLocation = worldLocation + worldDirection;
+		ControlPoint->SetWorldLocation(NewLocation);
+
+		// Logging: Debug log for updating control point position
+		UE_LOG(LogTemp, Log, TEXT("Control Point Position Updated_selectionbox_tick"));
+	}
+	else
+	{
+		// Logging: Debug log for control point not selected or null
+		UE_LOG(LogTemp, Error, TEXT("Control Point Not Selected Or Is Null_selectionbox_tick"));
+	}
 }
 
 void ASelectionBox::DestroyMesh()
