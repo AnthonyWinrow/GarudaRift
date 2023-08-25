@@ -13,6 +13,7 @@ UBuildMode::UBuildMode()
     bIsBuildModeActive = false;
     TurnSpeed = 20.0f;
     bHasUpdatedInitialCameraHeight = false;
+    bIsDragging = false;
 }
 
 void UBuildMode::UpdateCursorVisibility()
@@ -300,6 +301,26 @@ void UBuildMode::LeftMouseDrag(FVector2D InitialLeftClickLocation)
     FVector2D mousePosition;
     GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
 
+    // If dragging has not started, initialize PreviousMoseLocation and set the flag
+    if (!bIsDragging)
+    {
+        PreviousMousePosition = mousePosition;
+        bIsDragging = true;
+        return;
+    }
+
+    // Calculate the difference between the current annd previous mouse positions
+    FVector2D dragDelta = mousePosition - PreviousMousePosition;
+
+    // If there's no movement, exit the function
+    if (dragDelta.Size() == 0)
+    {
+        return;
+    }
+
+    // Update the previous mouse position
+    PreviousMousePosition = mousePosition;
+
     // Convert the mouse position to a world space ray
     FVector worldLocation, worldDirection;
     GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePosition.X, mousePosition.Y, worldLocation, worldDirection);
@@ -329,14 +350,12 @@ void UBuildMode::LeftMouseDrag(FVector2D InitialLeftClickLocation)
                 // Calculate dragging based on hit result
                 FVector dragLocation = hitResult.Location;
 
-                // Calculate the difference between the current mouse position and initial left click location
-                FVector2D dragDelta = mousePosition - InitialLeftClickLocation;
-
                 // Conver the 3D drag delta to a 3D offset in world space
-                FVector dragOffsetWorld = GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(dragDelta.X, dragDelta.Y, worldLocation, worldDirection) - worldLocation;
+                bool bResult = GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(dragDelta.X, dragDelta.Y, worldLocation, worldDirection);
+                FVector dragOffsetWorld = worldLocation;
 
                 // Determine the wall's forward vector
-                FVector WallForwardVector = SelectionBox->StaticMeshComponent->GetActorForwardVector();
+                FVector WallForwardVector = SelectionBox->StaticMeshComponent->GetOwner()->GetActorForwardVector();
 
                 // Calculate the left vector, which is perpendicular to the forward vector
                 FVector LeftVector = FVector::CrossProduct(WallForwardVector, FVector::UpVector);
