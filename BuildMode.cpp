@@ -329,11 +329,23 @@ void UBuildMode::LeftMouseDrag(FVector2D InitialLeftClickLocation)
                 // Calculate dragging based on hit result
                 FVector dragLocation = hitResult.Location;
 
-               // Calculate the difference between the current mouse position and the initial left click location
+                // Calculate the difference between the current mouse position and initial left click location
                 FVector2D dragDelta = mousePosition - InitialLeftClickLocation;
 
-                // Convert the 2D drag delta to a 3D offset
-                FVector dragOffset = FVector(dragDelta.X, dragDelta.Y, 0.0f);
+                // Conver the 3D drag delta to a 3D offset in world space
+                FVector dragOffsetWorld = GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(dragDelta.X, dragDelta.Y, worldLocation, worldDirection) - worldLocation;
+
+                // Determine the wall's forward vector
+                FVector WallForwardVector = SelectionBox->StaticMeshComponent->GetActorForwardVector();
+
+                // Calculate the left vector, which is perpendicular to the forward vector
+                FVector LeftVector = FVector::CrossProduct(WallForwardVector, FVector::UpVector);
+
+                // Project the drag offset onto the left vector to get the drag amount
+                float DragAmount = FVector::DotProduct(dragOffsetWorld, LeftVector);
+
+                // Calculate the new drag offset using the left vector
+                FVector dragOffset = LeftVector * DragAmount;
 
                 // Apply the offset to the control mesh
                 HitComponent->SetWorldLocation(dragLocation + dragOffset);
