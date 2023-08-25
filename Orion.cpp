@@ -123,12 +123,21 @@ void AOrion::Tick(float DeltaTime)
 
     if (bIsLeftMousePressed)
     {
+        // Logging: Debug log for entering the left mouse pressed tick
+        UE_LOG(LogTemp, Log, TEXT("Handling Left Mouse Pressed in Tick_orion_tick"));
+
+        // Logging: Debug log to check the state of bLeftMousePressed and TimeSinceLeftMousePressed
+        UE_LOG(LogTemp, Log, TEXT("bIsLeftMousePressed: %s, TimeSinceLeftMousePressed_orion_tick: %f"), bIsLeftMousePressed ? TEXT("True") : TEXT("False"), TimeSinceLeftMousePressed);
         TimeSinceLeftMousePressed += DeltaTime;
 
         if (TimeSinceLeftMousePressed >= 3.0f)
         {
             // Handle left mouse being held for at least 3 seconds
             bIsLeftMouseButtonHeld = true;
+
+            // Logging: Debug log for setting bIsLeftMouseButton to true
+            UE_LOG(LogTemp, Log, TEXT("bIsLeftMoueButtonHeld Set to True_orion_tick"));
+
             if (BuildMode && BuildMode->IsBuildModeActive())
             {
                 BuildMode->LeftMouseDrag(InitialLeftClickLocation);
@@ -140,6 +149,9 @@ void AOrion::Tick(float DeltaTime)
         // Reset the variables
         TimeSinceLeftMousePressed = 0.0f;
         bIsLeftMouseButtonHeld = false;
+
+        // Logging: Debug log for setting bIsLeftMousePressed to false
+        UE_LOG(LogTemp, Log, TEXT("bIsLeftMouseButtonHeld Set to False_orion_tick"));
     }
 
     if (bIsCameraMoving)
