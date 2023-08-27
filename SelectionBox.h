@@ -6,6 +6,8 @@
 #include "Components/SplineComponent.h"
 #include "SelectionBox.generated.h"
 
+class UBuildMode;
+
 UCLASS()
 class GARUDARIFT_API ASelectionBox : public AActor
 {
@@ -22,6 +24,10 @@ public:
 	// Method to destroy static mesh
 	void DestroyMesh();
 
+	// Flag to indicate if a control point is currently selected
+	UPROPERTY(BlueprintReadWrite, Category = "Control Point")
+	bool bIsControlPointSelected;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -30,14 +36,22 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-private:
 	// Static mesh component
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* StaticMeshComponent;
 
+	// Current control point tag
+	FString CurrentSelectedTag;
+
+	UStaticMeshComponent* SelectedControlPoint;
+
+private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
 	USplineComponent* WallSpline;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Points", meta = (AllowPrivateAccess = "true"))
 	TArray<UStaticMeshComponent*> ControlPointMeshes;
+
+	FVector StartDragLocation;
+	FVector CurrentDragLocation;
 };
