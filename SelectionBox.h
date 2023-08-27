@@ -51,7 +51,4 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Points", meta = (AllowPrivateAccess = "true"))
 	TArray<UStaticMeshComponent*> ControlPointMeshes;
-
-	FVector StartDragLocation;
-	FVector CurrentDragLocation;
 };
