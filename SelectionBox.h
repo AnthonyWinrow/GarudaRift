@@ -6,8 +6,6 @@
 #include "Components/SplineComponent.h"
 #include "SelectionBox.generated.h"
 
-class UBuildMode;
-
 UCLASS()
 class GARUDARIFT_API ASelectionBox : public AActor
 {
@@ -35,6 +33,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	void HandleControlPointClicked(UPrimitiveComponent* ClickedComp, FKey ButtonClicked);
 
 	// Static mesh component
 	UPROPERTY(VisibleAnywhere)
