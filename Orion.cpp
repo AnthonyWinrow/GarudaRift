@@ -130,9 +130,9 @@ void AOrion::Tick(float DeltaTime)
         UE_LOG(LogTemp, Log, TEXT("bIsLeftMousePressed: %s, TimeSinceLeftMousePressed_orion_tick: %f"), bIsLeftMousePressed ? TEXT("True") : TEXT("False"), TimeSinceLeftMousePressed);
         TimeSinceLeftMousePressed += DeltaTime;
 
-        if (TimeSinceLeftMousePressed >= 3.0f)
+        if (TimeSinceLeftMousePressed >= 0.5f)
         {
-            // Handle left mouse being held for at least 3 seconds
+            // Handle left mouse being held for at least .5 seconds
             bIsLeftMouseButtonHeld = true;
 
             // Logging: Debug log for setting bIsLeftMouseButton to true
@@ -140,7 +140,14 @@ void AOrion::Tick(float DeltaTime)
 
             if (BuildMode && BuildMode->IsBuildModeActive())
             {
-                BuildMode->LeftMouseDrag(InitialLeftClickLocation);
+                if (SelectionBox)
+                {
+                    SelectionBox->HandleControlPointClicked(hitResult.GetComponent(), EKeys::LeftMouseButton);
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Error, TEXT("SelectionBox is Null_orion_tick"))
+                }
             }
         }
     }
@@ -278,8 +285,6 @@ void AOrion::LeftMousePressed()
     if (BuildMode && BuildMode->IsBuildModeActive())
     {
         BuildMode->LeftClick();
-
-        BuildMode->LeftMouseDrag(InitialLeftClickLocation);
     }
 
     // Logging: Debug log for exiting left mouse pressed method
