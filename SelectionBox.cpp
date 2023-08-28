@@ -75,19 +75,34 @@ ASelectionBox::ASelectionBox()
 	{
 		FVector controlPointPosition = ControlPointLocations[i];
 
+		// Logging: Verifying control point position
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Position_selectionbox_constructor: %s"), i, *ControlPointLocations[i].ToString());
+
 		UStaticMeshComponent* ControlPointMesh = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("ControlPointMesh%d"), i)));
 		ControlPointMesh->SetupAttachment(RootComponent);
 		ControlPointMesh->SetStaticMesh(SphereMesh);
 
+		// Logging: Verify static mesh set
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d StaticMesh Set_selectionbox_constructor"), i);
+
 		// Set the relative location to the left or right position
 		ControlPointMesh->SetRelativeLocation(ControlPointLocations[i]);
+
+		// Logging: Verify relative location set
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Relative Location Set_selectionbox_constructor: %s"), i, *ControlPointLocations[i].ToString());
 
 		// Set the mesh scale factor
 		FVector ScaleFactor = FVector(0.1f, 0.1f, 0.1f);
 		ControlPointMesh->SetWorldScale3D(ScaleFactor);
 
+		// Logging: Verify mesh scale factor set
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Scale Factor Set_selectionbox_constructor: %s"), i, *ScaleFactor.ToString());
+
 		// Add tagging to identify the meshes as control point meshes
 		ControlPointMesh->ComponentTags.Add(FName("ControlPoint"));
+
+		// Logging: Verify tagging added
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Tag Added: ControlPoint"), i);
 
 		ControlPointMeshes.Add(ControlPointMesh);
 	}
@@ -112,6 +127,12 @@ void ASelectionBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ASelectionBox::HandleControlPointClicked(UPrimitiveComponent* ClickedComp, FKey ButtonClicked)
+{
+	// Logging: Verify control point clicked
+	UE_LOG(LogTemp, Log, TEXT("Control Point Clicked_selectionbox_oncontrolpointclicked: %s"), *ClickedComp->GetName());
 }
 
 void ASelectionBox::DestroyMesh()
