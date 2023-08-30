@@ -27,7 +27,7 @@ public:
 
     // Function Methods
     void LeftClick();
-    void UpdateSelectionBox(float DeltaTime, FVector2D InitialClickLocation, FName ClickedControlPointTag);
+    void UpdateSelectionBox();
 
     // Indicates whether build mode is active
     bool bIsBuildModeActive;
