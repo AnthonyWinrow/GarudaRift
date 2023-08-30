@@ -105,6 +105,9 @@ void AOrion::Tick(float DeltaTime)
         // Check if the hit component is valid and has the ControlPoint tag
         if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
         {
+            // Store the tag of the clicked control point
+            ClickedControlPointTag = HitComponent->ComponentTags[0];
+
             // Logging: Debug log for hovering over over a control point mesh
             UE_LOG(LogTemp, Log, TEXT("Raycast Hit Control Point Mesh_orion_tick: %s"), *HitComponent->GetName());
 
@@ -128,6 +131,7 @@ void AOrion::Tick(float DeltaTime)
 
         // Logging: Debug log to check the state of bLeftMousePressed and TimeSinceLeftMousePressed
         UE_LOG(LogTemp, Log, TEXT("bIsLeftMousePressed: %s, TimeSinceLeftMousePressed_orion_tick: %f"), bIsLeftMousePressed ? TEXT("True") : TEXT("False"), TimeSinceLeftMousePressed);
+        
         TimeSinceLeftMousePressed += DeltaTime;
 
         if (TimeSinceLeftMousePressed >= 0.5f)
@@ -138,15 +142,15 @@ void AOrion::Tick(float DeltaTime)
             // Logging: Debug log for setting bIsLeftMouseButton to true
             UE_LOG(LogTemp, Log, TEXT("bIsLeftMoueButtonHeld Set to True_orion_tick"));
 
-            if (BuildMode && BuildMode->IsBuildModeActive())
+            // Retrieve tag from hit component
+            FName HitTag = hitResult.GetComponent() ? hitResult.GetComponent()->ComponentTags[0] : FName();
+
+            // Check if the hit component is valid and has the controlpoint tag
+            if (hitResult.GetComponent() && HitTag != FName())
             {
-                if (SelectionBox)
+                if (BuildMode && BuildMode->IsBuildModeActive())
                 {
-                    SelectionBox->HandleControlPointClicked(hitResult.GetComponent(), EKeys::LeftMouseButton);
-                }
-                else
-                {
-                    UE_LOG(LogTemp, Error, TEXT("SelectionBox is Null_orion_tick"))
+                        BuildMode->UpdateSelectionBox(DeltaTime, InitialClickLocation, ClickedControlPointTag);
                 }
             }
         }
@@ -277,10 +281,10 @@ void AOrion::LeftMousePressed()
     bIsLeftMousePressed = true;
 
     // Get the current mouse position and store it in a variable
-    GetWorld()->GetFirstPlayerController()->GetMousePosition(InitialLeftClickLocation.X, InitialLeftClickLocation.Y);
+    GetWorld()->GetFirstPlayerController()->GetMousePosition(InitialClickLocation.X, InitialClickLocation.Y);
 
     // Logging: Debug log for storing initial left click location
-    UE_LOG(LogTemp, Log, TEXT("Initial Left Click Location_orion_leftmousepressed: X=%f, Y=%f"), InitialLeftClickLocation.X, InitialLeftClickLocation.Y);
+    UE_LOG(LogTemp, Log, TEXT("Initial Left Click Location_orion_leftmousepressed: X=%f, Y=%f"), InitialClickLocation.X, InitialClickLocation.Y);
     
     if (BuildMode && BuildMode->IsBuildModeActive())
     {
