@@ -110,17 +110,11 @@ void AOrion::Tick(float DeltaTime)
 
             // Logging: Debug log for hovering over over a control point mesh
             UE_LOG(LogTemp, Log, TEXT("Raycast Hit Control Point Mesh_orion_tick: %s"), *HitComponent->GetName());
-
-            // Change the cursor to a hand
-            GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Hand;
         }
         else
         {
             // Logging: Debug log for hit component being null or not having the control point tag
             UE_LOG(LogTemp, Error, TEXT("Hit Component is Null or Does Not Have ControlPoint Tag_orion_tick"));
-
-            // Revert the cursror back to default state
-            GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Default;
         }
     }
 
@@ -142,15 +136,12 @@ void AOrion::Tick(float DeltaTime)
             // Logging: Debug log for setting bIsLeftMouseButton to true
             UE_LOG(LogTemp, Log, TEXT("bIsLeftMoueButtonHeld Set to True_orion_tick"));
 
-            // Retrieve tag from hit component
-            FName HitTag = hitResult.GetComponent() ? hitResult.GetComponent()->ComponentTags[0] : FName();
-
             // Check if the hit component is valid and has the controlpoint tag
-            if (hitResult.GetComponent() && HitTag != FName())
+            if (hitResult.GetComponent() && hitResult.GetComponent())
             {
                 if (BuildMode && BuildMode->IsBuildModeActive())
                 {
-                        BuildMode->UpdateSelectionBox(DeltaTime, InitialClickLocation, ClickedControlPointTag);
+                        BuildMode->UpdateSelectionBox();
                 }
             }
         }
