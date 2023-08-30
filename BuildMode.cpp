@@ -288,3 +288,9 @@ void UBuildMode::LeftClick()
         UE_LOG(LogTemp, Log, TEXT("SelectionBox Spawned at Location: %s_buildmode_leftclick"), *ClickLocation.ToString());
     }
 }
+
+void UBuildMode::UpdateSelectionBox(float DeltaTime, FVector2D InitialClickLocation, FName ClickedControlPointTag)
+{
+    // Logging: Check if method entered
+    UE_LOG(LogTemp, Log, TEXT("UpdateSelectionBox is Being Called_buildmode_updateselectionbox"));
+}
