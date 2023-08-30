@@ -26,8 +26,8 @@ public:
     void Zoom(float Value);
 
     // Function Methods
-    void LeftMouseDrag(FVector2D InitialLeftClickLocation);
     void LeftClick();
+    void UpdateSelectionBox(float DeltaTime, FVector2D InitialClickLocation, FName ClickedControlPointTag);
 
     // Indicates whether build mode is active
     bool bIsBuildModeActive;
@@ -64,5 +64,5 @@ public:
     ASelectionBox* SelectionBox;
 
 private:
-
+    FVector2D PreviousMousePosition;
 };
