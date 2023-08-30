@@ -34,8 +34,6 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	void HandleControlPointClicked(UPrimitiveComponent* ClickedComp, FKey ButtonClicked);
-
 	// Static mesh component
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* StaticMeshComponent;
@@ -44,6 +42,8 @@ public:
 	FString CurrentSelectedTag;
 
 	UStaticMeshComponent* SelectedControlPoint;
+	bool bIsDraggingControlPoint;
+	FVector2D StoredInitialClickLocation;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
