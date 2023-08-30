@@ -289,7 +289,7 @@ void UBuildMode::LeftClick()
     }
 }
 
-void UBuildMode::UpdateSelectionBox(float DeltaTime, FVector2D InitialClickLocation, FName ClickedControlPointTag)
+void UBuildMode::UpdateSelectionBox()
 {
     // Logging: Check if method entered
     UE_LOG(LogTemp, Log, TEXT("UpdateSelectionBox is Being Called_buildmode_updateselectionbox"));
