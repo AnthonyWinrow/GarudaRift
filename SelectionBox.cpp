@@ -11,6 +11,9 @@ ASelectionBox::ASelectionBox()
 	CurrentSelectedTag = TEXT("");
 	SelectedControlPoint = nullptr;
 
+	// Logging: Debug log for current selected initialization
+	UE_LOG(LogTemp, Log, TEXT("CurrentSelectedTag Initialized To_selectionbox_constructor: %s"), *CurrentSelectedTag);
+
 	// Logging: Debug log for CurrentSelectedTag initialization
 	UE_LOG(LogTemp, Log, TEXT("CurrentSelectedTag Initialized To_selectionbox_constructor: %s"), *CurrentSelectedTag);
 
@@ -99,7 +102,8 @@ ASelectionBox::ASelectionBox()
 		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Scale Factor Set_selectionbox_constructor: %s"), i, *ScaleFactor.ToString());
 
 		// Add tagging to identify the meshes as control point meshes
-		ControlPointMesh->ComponentTags.Add(FName("ControlPoint"));
+		FName UniqueTag = FName(*FString::Printf(TEXT("ControlPointMesh%d"), i));
+		ControlPointMesh->ComponentTags.Add(UniqueTag);
 
 		// Logging: Verify tagging added
 		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Tag Added: ControlPoint"), i);
@@ -116,10 +120,6 @@ void ASelectionBox::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UE_LOG(LogTemp, Log, TEXT("BeginPlay_selectionbox_beginplay"));
-
-	// Logging: Debug log for initial value check
-	UE_LOG(LogTemp, Log, TEXT("Initial Values - bIsControlPointSelected: %d, CurrentSelectedTag_selectionbox_beginplay: %s"), bIsControlPointSelected, *CurrentSelectedTag);
 }
 
 // Called every frame
@@ -127,32 +127,6 @@ void ASelectionBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-}
-
-void ASelectionBox::HandleControlPointClicked(FVector2D InitialClickLocation)
-{
-	// Logging: Verify control point clicked
-	UE_LOG(LogTemp, Log, TEXT("Control Point Clicked With Initial Click Location_selectionbox_handlecontrolpointclicked: X=%f, Y=%f"), InitialClickLocation.X, InitialClickLocation.Y);
-
-	if (this)
-	{
-		// Store the initial click location for later use
-		StoredInitialClickLocation = InitialClickLocation;
-
-
-		// Logging: Check stored initial click location
-		UE_LOG(LogTemp, Log, TEXT("Stored Initial Click Location_selectionbox_handlecontrolpointclicked: %s"), *StoredInitialClickLocation.ToString());
-
-		// Initialize dragging state
-		bIsDraggingControlPoint = true;
-
-		// Logging
-		UE_LOG(LogTemp, Log, TEXT("Initialized Dragging State to True_selectionbox_handlecontrolpointclicked"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("SelectionBox Object Is Not Initialized"));
-	}
 }
 
 void ASelectionBox::DestroyMesh()
