@@ -3,7 +3,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "E:/Unreal Projects/GarudaRift/Source/GarudaRift/CharacterLogic/FreeLookMode.h"
-#include "E:/Unreal Projects/GarudaRift/Source/GarudaRift/CharacterLogic/BuildMode.h" 
+#include "E:/Unreal Projects/GarudaRift/Source/GarudaRift/CharacterLogic/BuildMode.h"
+#include "E:/Unreal Projects/GarudaRift/Source/GarudaRift/ActorClasses/SelectionBox.h"
 #include "Orion.generated.h"
 
 class UGroundMode;
@@ -76,7 +77,7 @@ public:
     float TimeSinceLeftMousePressed;
     bool bIsLeftMouseButtonHeld;
     bool bIsLeftMousePressed;
-    FVector2D InitialLeftClickLocation;
+    FVector2D InitialClickLocation;
 
     // Handles FreeLookMode
     void ActivateFreeLookMode();
@@ -142,4 +143,7 @@ private:
 
     // Stores the target arm length before entering build mode
     float SavedTargetArmLength;
+
+    // Point to ASelectionBox
+    ASelectionBox* SelectionBox;
 };
