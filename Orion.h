@@ -74,10 +74,8 @@ public:
     // Handles left mouse button
     void LeftMousePressed();
     void LeftMouseReleased();
-    float TimeSinceLeftMousePressed;
     bool bIsLeftMouseButtonHeld;
     bool bIsLeftMousePressed;
-    FVector2D InitialClickLocation;
 
     // Handles FreeLookMode
     void ActivateFreeLookMode();
@@ -103,6 +101,7 @@ public:
     float CameraMoveStartTime;
     float CameraMoveDuration;
     float LastAutoRunDisableTime;
+    FVector2D InitialClickLocation;
 
     // Camera Storage
     FVector InitialCameraRelativeLocation;
