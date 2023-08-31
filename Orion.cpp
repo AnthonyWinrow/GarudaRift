@@ -24,7 +24,7 @@ AOrion::AOrion()
     bShouldHideMesh = false;
     bIsLeftMouseButtonHeld = false;
     bIsLeftMousePressed = false;
-    TimeSinceLeftMousePressed = 0.0f;
+    InitialClickLocation = FVector2D::ZeroVector;
 
     // Disable automatic rotation to face the direction of movement
     GetCharacterMovement()->bOrientRotationToMovement = false;
@@ -78,83 +78,6 @@ void AOrion::BeginPlay()
 void AOrion::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-
-    // Get current mouse location
-    FVector2D mousePosition;
-    GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
-
-    // Convert the mouse position to a world space ray
-    FVector worldLocation, worldDirection;
-    GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePosition.X, mousePosition.Y, worldLocation, worldDirection);
-
-    // Perform raycast to detect what was hovered
-    FHitResult hitResult;
-    FVector start = worldLocation;
-    FVector end = ((worldDirection * 2000.0f) + worldLocation);
-    FCollisionQueryParams collisionParams;
-
-    // Check if raycast hit something
-    if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Visibility, collisionParams))
-    {
-        // Logging: Debug log for hitting something
-        UE_LOG(LogTemp, Log, TEXT("Raycast Hit Something_orion_tick: %s"), *hitResult.GetActor()->GetName());
-
-        // Get the hit component
-        UPrimitiveComponent* HitComponent = hitResult.GetComponent();
-
-        // Check if the hit component is valid and has the ControlPoint tag
-        if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
-        {
-            // Store the tag of the clicked control point
-            ClickedControlPointTag = HitComponent->ComponentTags[0];
-
-            // Logging: Debug log for hovering over over a control point mesh
-            UE_LOG(LogTemp, Log, TEXT("Raycast Hit Control Point Mesh_orion_tick: %s"), *HitComponent->GetName());
-        }
-        else
-        {
-            // Logging: Debug log for hit component being null or not having the control point tag
-            UE_LOG(LogTemp, Error, TEXT("Hit Component is Null or Does Not Have ControlPoint Tag_orion_tick"));
-        }
-    }
-
-    if (bIsLeftMousePressed)
-    {
-        // Logging: Debug log for entering the left mouse pressed tick
-        UE_LOG(LogTemp, Log, TEXT("Handling Left Mouse Pressed in Tick_orion_tick"));
-
-        // Logging: Debug log to check the state of bLeftMousePressed and TimeSinceLeftMousePressed
-        UE_LOG(LogTemp, Log, TEXT("bIsLeftMousePressed: %s, TimeSinceLeftMousePressed_orion_tick: %f"), bIsLeftMousePressed ? TEXT("True") : TEXT("False"), TimeSinceLeftMousePressed);
-        
-        TimeSinceLeftMousePressed += DeltaTime;
-
-        if (TimeSinceLeftMousePressed >= 0.5f)
-        {
-            // Handle left mouse being held for at least .5 seconds
-            bIsLeftMouseButtonHeld = true;
-
-            // Logging: Debug log for setting bIsLeftMouseButton to true
-            UE_LOG(LogTemp, Log, TEXT("bIsLeftMoueButtonHeld Set to True_orion_tick"));
-
-            // Check if the hit component is valid and has the controlpoint tag
-            if (hitResult.GetComponent() && hitResult.GetComponent())
-            {
-                if (BuildMode && BuildMode->IsBuildModeActive())
-                {
-                        BuildMode->UpdateSelectionBox();
-                }
-            }
-        }
-    }
-    else
-    {
-        // Reset the variables
-        TimeSinceLeftMousePressed = 0.0f;
-        bIsLeftMouseButtonHeld = false;
-
-        // Logging: Debug log for setting bIsLeftMousePressed to false
-        UE_LOG(LogTemp, Log, TEXT("bIsLeftMouseButtonHeld Set to False_orion_tick"));
-    }
 
     if (bIsCameraMoving)
     {
@@ -324,12 +247,6 @@ void AOrion::DeactivateFreeLookMode()
 
 void AOrion::EnterBuildMode()
 {
-    // If build mode is already active, don't do anything
-    if (BuildMode->IsBuildModeActive())
-    {
-        return;
-    }
-
     // Store the original forward vector of the camera boom
     OriginalBoomForwardVector = FollowCamera->GetForwardVector();
 
