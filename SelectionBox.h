@@ -47,7 +47,6 @@ public:
 	float TimeSinceLeftMousePressed;
 	bool bIsLeftMouseButtonHeld;
 	bool bIsLeftMousePressed;
-	FVector2D InitialClickLocation;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
