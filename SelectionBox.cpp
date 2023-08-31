@@ -9,7 +9,13 @@ ASelectionBox::ASelectionBox()
 	UE_LOG(LogTemp, Log, TEXT("SelectionBox Constructor Called_selectionbox_constructor"));
 
 	CurrentSelectedTag = TEXT("");
-	SelectedControlPoint = nullptr;
+	TimeSinceLeftMousePressed = 0.0f;
+	bIsLeftMouseButtonHeld = false;
+	bIsLeftMousePressed = false;
+	InitialClickLocation = FVector2D::ZeroVector;
+
+	// Logging: Variable Initializations
+	UE_LOG(LogTemp, Log, TEXT("SelectionBox Variables Initialized_selectionbox_constructor"));
 
 	// Logging: Debug log for current selected initialization
 	UE_LOG(LogTemp, Log, TEXT("CurrentSelectedTag Initialized To_selectionbox_constructor: %s"), *CurrentSelectedTag);
@@ -127,6 +133,56 @@ void ASelectionBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// Time since left mouse was pressed
+	if (bIsLeftMousePressed)
+	{
+		TimeSinceLeftMousePressed += DeltaTime;
+	}
+
+	// Check if left mouse button is held for 0.5 seconds
+	if (TimeSinceLeftMousePressed > -0.5f && bIsLeftMouseButtonHeld == false)
+	{
+		bIsLeftMouseButtonHeld = true;
+
+		// Logging: State of left mouse button held
+		UE_LOG(LogTemp, Log, TEXT("Left Mouse Button Held for 0.5 Seconds_selectionbox_tick"));
+	}
+}
+
+// Get current mouse location
+FVector2D mousePosition;
+GetWorld()->GetFirstPlayerController()->GetMousePosition(mousePosition.X, mousePosition.Y);
+
+// Convert the mouse position to a world space ray
+FVector worldLocation, worldDirection;
+GetWorld()->GetFirstPlayerController()->DeprojectScreenPositionToWorld(mousePosition.X, mousePosition.Y, worldLocation, worldDirection);
+
+// Perform raycast to detect what was hovered
+FHitResult hitResult;
+FVector start = worldLocation;
+FVector end = ((worldDirection * 2000.0f) + worldLocation);
+FCollisionQueryParams collisionParams;
+
+// Check if raycast hit something
+if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Visibility, collisionParams))
+{
+	// Logging: Debug log for hitting something
+	UE_LOG(LogTemp, Log, TEXT("Raycast Hit Something_orion_tick: %s"), *hitResult.GetActor()->GetName());
+
+	// Get the hit component
+	UPrimitiveComponent* HitComponent = hitResult.GetComponent();
+
+	// Check if the hit component is valid and has the ControlPoint tag
+	if (HitComponent != nullptr && HitComponent->ComponentHasTag(FName("ControlPoint")))
+	{
+		// Logging: Debug log for hovering over over a control point mesh
+		UE_LOG(LogTemp, Log, TEXT("Raycast Hit Control Point Mesh_orion_tick: %s"), *HitComponent->GetName());
+	}
+	else
+	{
+		// Logging: Debug log for hit component being null or not having the control point tag
+		UE_LOG(LogTemp, Error, TEXT("Hit Component is Null or Does Not Have ControlPoint Tag_orion_tick"));
+	}
 }
 
 void ASelectionBox::DestroyMesh()
