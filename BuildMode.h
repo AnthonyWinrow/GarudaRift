@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/NoExportTypes.h"
 #include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/Engine/Classes/Components/SplineComponent.h"
 #include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/Engine/Classes/Components/SplineMeshComponent.h"
 #include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/CoreUObject/Public/UObject/ConstructorHelpers.h"
@@ -26,8 +25,8 @@ public:
     void Zoom(float Value);
 
     // Function Methods
-    void LeftClick();
-    void UpdateSelectionBox();
+    void LeftClick(bool bIsPressed);
+    bool bIsLeftMouseCurrentlyPressed;
 
     // Indicates whether build mode is active
     bool bIsBuildModeActive;
