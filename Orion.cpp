@@ -202,7 +202,7 @@ void AOrion::LeftMousePressed()
     
     if (BuildMode && BuildMode->IsBuildModeActive())
     {
-        BuildMode->LeftClick();
+        BuildMode->LeftClick(bIsLeftMousePressed);
     }
 
     // Logging: Debug log for exiting left mouse pressed method
@@ -212,6 +212,12 @@ void AOrion::LeftMousePressed()
 void AOrion::LeftMouseReleased()
 {
     bIsLeftMousePressed = false;
+
+    // Notify BuildMode about the release
+    if (BuildMode)
+    {
+        BuildMode->LeftClick(bIsLeftMousePressed);
+    }
 }
 
 void AOrion::ToggleAutoRun()
