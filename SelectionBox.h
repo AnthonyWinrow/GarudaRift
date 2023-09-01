@@ -41,12 +41,16 @@ public:
 	// Current control point tag
 	FString CurrentSelectedTag;
 
+	// Function to accept left mouse click data
+	void LeftClick(bool bIsPressed);
+
 	UStaticMeshComponent* SelectedControlPoint;
 	bool bIsDraggingControlPoint;
 	FVector2D StoredInitialClickLocation;
 	float TimeSinceLeftMousePressed;
 	bool bIsLeftMouseButtonHeld;
 	bool bIsLeftMousePressed;
+	bool bIsMouseOverControlPointMesh;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
