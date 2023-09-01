@@ -132,12 +132,16 @@ void ASelectionBox::Tick(float DeltaTime)
 	}
 
 	// Check if left mouse button is held for 0.5 seconds
-	if (TimeSinceLeftMousePressed > -0.5f && bIsLeftMouseButtonHeld == false)
+	if (TimeSinceLeftMousePressed > 0.5f && bIsLeftMousePressed)
 	{
 		bIsLeftMouseButtonHeld = true;
 
 		// Logging: State of left mouse button held
 		UE_LOG(LogTemp, Log, TEXT("Left Mouse Button Held for 0.5 Seconds_selectionbox_tick"));
+	}
+	else
+	{
+		bIsLeftMouseButtonHeld = false;
 	}
 
 	// Get current mouse location
@@ -163,6 +167,9 @@ void ASelectionBox::Tick(float DeltaTime)
 		// Get the hit component
 		UPrimitiveComponent* HitComponent = hitResult.GetComponent();
 
+		// Initialize cursor state flag
+		bool bShouldShowHandCursor = false;
+
 		// Loop through the spline mesh array to check if the hit component was one of the spline meshes
 		for (int i = 0; i < ControlPointMeshes.Num(); ++i)
 		{
@@ -170,10 +177,39 @@ void ASelectionBox::Tick(float DeltaTime)
 			{
 				// Logging: Identify the clicked spline mesh
 				UE_LOG(LogTemp, Log, TEXT("Clicked on SplineMesh_selectionbox_tick %d"), i);
+
+				// Set the flag to change the cursor to a hand
+				bShouldShowHandCursor = true;
 				break;
+
+				// Set the flag to indicate mouse is over a control point mesh
+				bIsMouseOverControlPointMesh = true;
+				return;
 			}
 		}
+
+		// Reset the flag if the mouse is not over a control point mesh
+		bIsMouseOverControlPointMesh = false;
+
+		// Change the cursor based on the flag
+		if (bShouldShowHandCursor)
+		{
+			GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Hand;
+		}
+		else
+		{
+			GetWorld()->GetFirstPlayerController()->CurrentMouseCursor = EMouseCursor::Default;
+		}
 	}
+}
+
+void ASelectionBox::LeftClick(bool bIsPressed)
+{
+	// Set the internal state of left click
+	bIsLeftMousePressed = bIsPressed;
+
+	// Logging: State of left bIsLeftMousePressed
+	UE_LOG(LogTemp, Log, TEXT("LeftClick Called_selectionbox_leftclick: %s"), bIsLeftMousePressed ? TEXT("True") : TEXT("False"));
 }
 
 void ASelectionBox::DestroyMesh()
