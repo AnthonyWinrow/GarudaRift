@@ -242,15 +242,31 @@ bool UBuildMode::IsBuildModeActive()
     return bIsBuildModeActive;
 }
 
-void UBuildMode::LeftClick()
+void UBuildMode::LeftClick(bool bIsPressed)
 {
+    // Logging: Log the method call
     UE_LOG(LogTemp, Warning, TEXT("LeftClick Method Called_buildmode_leftclick"));
 
-    // Check if there's already an instance of selectionbox
+    // Update current state
+    bIsLeftMouseCurrentlyPressed = bIsPressed;
+
+    // If SelectionBox exists, pass the state to it
+    if (IsValid(SelectionBox))
+    {
+        SelectionBox->LeftClick(bIsPressed);
+    }
+
+    // Only proceed to spawning if the mouse is pressed
+    if (!bIsPressed)
+    {
+        return;
+    }
+
+    // Check if there's already an instance of SelectionBox
     if (IsValid(SelectionBox))
     {
         // If an instance already exists, do nothing
-        UE_LOG(LogTemp, Warning, TEXT("SelectionBox Instance Already Exists. SelectionBox Spawn = Request Rejected_buildmode_leftclick"));
+        UE_LOG(LogTemp, Warning, TEXT("SelectionBox Instance Already Exists. SelectionBox Spawn_buildmode = Request Rejected_buildmode_leftclick"));
         return;
     }
 
@@ -286,11 +302,13 @@ void UBuildMode::LeftClick()
 
         // Log the action
         UE_LOG(LogTemp, Log, TEXT("SelectionBox Spawned at Location: %s_buildmode_leftclick"), *ClickLocation.ToString());
-    }
-}
 
-void UBuildMode::UpdateSelectionBox()
-{
-    // Logging: Check if method entered
-    UE_LOG(LogTemp, Log, TEXT("UpdateSelectionBox is Being Called_buildmode_updateselectionbox"));
+        // Notify SelectionBox of mouse click/release
+        if (IsValid(SelectionBox))
+        {
+            SelectionBox->LeftClick(bIsPressed);
+
+            UE_LOG(LogTemp, Log, TEXT("SelectionBox LeftClick Method Called_buildmode_leftclick"));
+        }
+    }
 }
