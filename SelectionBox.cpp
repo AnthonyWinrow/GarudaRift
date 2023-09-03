@@ -13,6 +13,7 @@ ASelectionBox::ASelectionBox()
 	TimeSinceLeftMousePressed = 0.0f;
 	bIsLeftMouseButtonHeld = false;
 	bIsLeftMousePressed = false;
+	bIsDragging = false;
 
 	// Logging: Variable Initializations
 	UE_LOG(LogTemp, Log, TEXT("SelectionBox Variables Initialized_selectionbox_constructor"));
@@ -38,80 +39,80 @@ ASelectionBox::ASelectionBox()
 	}
 
 	// Attach mesh to root component
-RootComponent = StaticMeshComponent;
+	RootComponent = StaticMeshComponent;
 
-// Verify Wall's Orientation (if StaticMeshComponent is valid)
-UE_LOG(LogTemp, Log, TEXT("Wall Forward Vector_selectionbox_constructor: %s"), *StaticMeshComponent->GetForwardVector().ToString());
-UE_LOG(LogTemp, Log, TEXT("Wall Right Vector_selectionbox_constructor: %s"), *StaticMeshComponent->GetRightVector().ToString());
+	// Verify Wall's Orientation (if StaticMeshComponent is valid)
+	UE_LOG(LogTemp, Log, TEXT("Wall Forward Vector_selectionbox_constructor: %s"), *StaticMeshComponent->GetForwardVector().ToString());
+	UE_LOG(LogTemp, Log, TEXT("Wall Right Vector_selectionbox_constructor: %s"), *StaticMeshComponent->GetRightVector().ToString());
 
-UE_LOG(LogTemp, Log, TEXT(" Mesh Initialized in Constructor_selectionbox_constructor"));
+	UE_LOG(LogTemp, Log, TEXT(" Mesh Initialized in Constructor_selectionbox_constructor"));
 
-// Create spline component
-WallSpline = CreateDefaultSubobject<USplineComponent>(TEXT("WallSpline"));
+	// Create spline component
+	WallSpline = CreateDefaultSubobject<USplineComponent>(TEXT("WallSpline"));
 
-// Attach the spline to its root
-WallSpline->SetupAttachment(RootComponent);
+	// Attach the spline to its root
+	WallSpline->SetupAttachment(RootComponent);
 
-// Log the spline component initilization
-UE_LOG(LogTemp, Log, TEXT("Spline Component Initialized_selectionbox_constructor"));
+	// Log the spline component initilization
+	UE_LOG(LogTemp, Log, TEXT("Spline Component Initialized_selectionbox_constructor"));
 
-// Get the bounding box of the static mesh
-FBox BoundingBox = StaticMeshComponent->GetStaticMesh()->GetBoundingBox();
+	// Get the bounding box of the static mesh
+	FBox BoundingBox = StaticMeshComponent->GetStaticMesh()->GetBoundingBox();
 
-// Calculate the center of the wall
-FVector Center = BoundingBox.GetCenter();
+	// Calculate the center of the wall
+	FVector Center = BoundingBox.GetCenter();
 
-// Log the spline component initialization
-UE_LOG(LogTemp, Log, TEXT("WallSpline Component Initialized_selectionbox_constructor"));
+	// Log the spline component initialization
+	UE_LOG(LogTemp, Log, TEXT("WallSpline Component Initialized_selectionbox_constructor"));
 
-// Find the control point mesh
-static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
-UStaticMesh* SphereMesh = SphereMeshAsset.Object;
+	// Find the control point mesh
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
+	UStaticMesh* SphereMesh = SphereMeshAsset.Object;
 
-// Get the right vector of the wall
-FVector WallRightVector = StaticMeshComponent->GetRightVector();
+	// Get the right vector of the wall
+	FVector WallRightVector = StaticMeshComponent->GetRightVector();
 
-// Define the offset from the center to the left and right sides
-float Offset = 15.f;
+	// Define the offset from the center to the left and right sides
+	float Offset = 15.f;
 
-// Calculate left and right positions for the control points
-FVector LeftPosition = Center - (WallRightVector * Offset);
-FVector RightPosition = Center + (WallRightVector * Offset);
+	// Calculate left and right positions for the control points
+	FVector LeftPosition = Center - (WallRightVector * Offset);
+	FVector RightPosition = Center + (WallRightVector * Offset);
 
-// Create the control point visualizations
-TArray<FVector> ControlPointLocations = { LeftPosition, RightPosition };
-for (int i = 0; i < ControlPointLocations.Num(); ++i)
-{
-	FVector controlPointPosition = ControlPointLocations[i];
+	// Create the control point visualizations
+	TArray<FVector> ControlPointLocations = { LeftPosition, RightPosition };
+	for (int i = 0; i < ControlPointLocations.Num(); ++i)
+	{
+		FVector controlPointPosition = ControlPointLocations[i];
 
-	// Logging: Verifying control point position
-	UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Position_selectionbox_constructor: %s"), i, *ControlPointLocations[i].ToString());
+		// Logging: Verifying control point position
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Position_selectionbox_constructor: %s"), i, *ControlPointLocations[i].ToString());
 
-	UStaticMeshComponent* ControlPointMesh = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("ControlPointMesh%d"), i)));
-	ControlPointMesh->SetupAttachment(RootComponent);
-	ControlPointMesh->SetStaticMesh(SphereMesh);
+		UStaticMeshComponent* ControlPointMesh = CreateDefaultSubobject<UStaticMeshComponent>(FName(*FString::Printf(TEXT("ControlPointMesh%d"), i)));
+		ControlPointMesh->SetupAttachment(RootComponent);
+		ControlPointMesh->SetStaticMesh(SphereMesh);
 
-	// Logging: Verify static mesh set
-	UE_LOG(LogTemp, Log, TEXT("ControlPoint%d StaticMesh Set_selectionbox_constructor"), i);
+		// Logging: Verify static mesh set
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d StaticMesh Set_selectionbox_constructor"), i);
 
-	// Set the relative location to the left or right position
-	ControlPointMesh->SetRelativeLocation(ControlPointLocations[i]);
+		// Set the relative location to the left or right position
+		ControlPointMesh->SetRelativeLocation(ControlPointLocations[i]);
 
-	// Logging: Verify relative location set
-	UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Relative Location Set_selectionbox_constructor: %s"), i, *ControlPointLocations[i].ToString());
+		// Logging: Verify relative location set
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Relative Location Set_selectionbox_constructor: %s"), i, *ControlPointLocations[i].ToString());
 
-	// Set the mesh scale factor
-	FVector ScaleFactor = FVector(0.1f, 0.1f, 0.1f);
-	ControlPointMesh->SetWorldScale3D(ScaleFactor);
+		// Set the mesh scale factor
+		FVector ScaleFactor = FVector(0.1f, 0.1f, 0.1f);
+		ControlPointMesh->SetWorldScale3D(ScaleFactor);
 
-	// Logging: Verify mesh scale factor set
-	UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Scale Factor Set_selectionbox_constructor: %s"), i, *ScaleFactor.ToString());
+		// Logging: Verify mesh scale factor set
+		UE_LOG(LogTemp, Log, TEXT("ControlPoint%d Scale Factor Set_selectionbox_constructor: %s"), i, *ScaleFactor.ToString());
 
-	ControlPointMeshes.Add(ControlPointMesh);
-}
+		ControlPointMeshes.Add(ControlPointMesh);
+	}
 
-UE_LOG(LogTemp, Log, TEXT("Control Points Initialized and Visible with Default Sphere Mesh_selectionbox_constructor"));
-UE_LOG(LogTemp, Log, TEXT("Mesh Initialized in Constructor_selectionbox_constructor"));
+	UE_LOG(LogTemp, Log, TEXT("Control Points Initialized and Visible with Default Sphere Mesh_selectionbox_constructor"));
+	UE_LOG(LogTemp, Log, TEXT("Mesh Initialized in Constructor_selectionbox_constructor"));
 }
 
 // Called when the game starts or when spawned
@@ -192,14 +193,40 @@ void ASelectionBox::Tick(float DeltaTime)
 
 			// Perform a new raycast to get the current mouse position
 			if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Visibility, collisionParams))
-			{
+			{	
 				// Move the selected control point mesh with the mouse
 				if (SelectedControlPoint && hitResult.bBlockingHit)
 				{
+					// Initialize StartingLocation when control point is first selected
+					if (!bIsDragging)
+					{
+						StartingLocation = SelectedControlPoint->GetComponentLocation();
+						bIsDragging = true;
+					}
+					
 					FVector NewLocation = hitResult.Location;
 
-					// Simplified movement
-					SelectedControlPoint->SetWorldLocation(NewLocation);
+					// Get the current world location of the control point
+					FVector CurrentWorldLocation = SelectedControlPoint->GetComponentLocation();
+
+					// Get the wall's normal vector
+					FVector WallNormal = StaticMeshComponent->GetForwardVector();
+
+					// Project location onto a planed defined by the wall's normal
+					FVector PlanePoint = CurrentWorldLocation;
+					FVector ProjectedLocation = FVector::PointPlaneProject(NewLocation, PlanePoint, WallNormal);
+
+					// Determine the direction of the control point relative to the wall
+					FVector Direction = (ProjectedLocation - StartingLocation).GetSafeNormal();
+
+					// Smoothly Interpolate to the target world location
+					FVector SmoothWorldLocation = FMath::VInterpTo(CurrentWorldLocation, ProjectedLocation, DeltaTime, 5.0f);
+
+					// Move the control point to the SmoothWorldLocation
+					SelectedControlPoint->SetWorldLocation(SmoothWorldLocation);
+
+					// Logging: Verifty new control point location
+					UE_LOG(LogTemp, Log, TEXT("New Projected Location of Control Point_selectionbox_tick: %s"), *SmoothWorldLocation.ToString());
 				}
 			}
 		}
