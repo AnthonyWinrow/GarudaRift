@@ -225,6 +225,49 @@ void ASelectionBox::Tick(float DeltaTime)
 					// Move the control point to the SmoothWorldLocation
 					SelectedControlPoint->SetWorldLocation(SmoothWorldLocation);
 
+					static float InitialDotProduct = FLT_MAX;
+
+					// Clamp ControlPointMesh0
+					if (SelectedControlPoint->GetName().Equals("ControlPointMesh0"))
+					{
+						FVector WallRight = StaticMeshComponent->GetRightVector();
+						FVector CurrentLocation = SelectedControlPoint->GetComponentLocation();
+
+						// Logging: Verify WallRight and CurrentLocation
+						UE_LOG(LogTemp, Log, TEXT("WallRight: %s, CurrentLocation_selectionbox_tick: %s"), *WallRight.ToString(), *CurrentLocation.ToString());
+
+						// Calculate the distance from starting location
+						float Distance = FVector::Dist(StartingLocation, ProjectedLocation);
+
+						// Determine the direction of movement
+						FVector MovementDirection = (ProjectedLocation - StartingLocation).GetSafeNormal();
+
+						// Logging: Verify WallRight, MovementDirection, and ProjectedLocation
+						UE_LOG(LogTemp, Log, TEXT("WallRight: %s, MovementDirection: %s, ProjectedLocation_selectionbox_tick: %s"), *WallRight.ToString(), *MovementDirection.ToString(), *ProjectedLocation.ToString());
+
+						// Calculate DotProduct
+						float DotProduct = FVector::DotProduct(MovementDirection, WallRight);
+
+						// Logging: Verify dot product
+						UE_LOG(LogTemp, Log, TEXT("DotProduct_selectionbox_tick: %f"), DotProduct);
+
+						// Stabilize the direction based on the initial DotProduct
+						if ((InitialDotProduct < 0 && DotProduct < 0) || (InitialDotProduct >= 0 && DotProduct >= 0))
+						{
+							// Clamp the distance
+							float ClampedDistance = FMath::Clamp(Distance, 0.0f, 300.0f);
+
+							// Calculate the new clamped location
+							FVector ClampedLocation = StartingLocation + WallRight * ClampedDistance;
+
+							// Logging: Verify the clamped location
+							UE_LOG(LogTemp, Log, TEXT("Clamped Location_selectionbox_tick: %s"), *ClampedLocation.ToString());
+
+							// Set new clamped location
+							SelectedControlPoint->SetWorldLocation(ClampedLocation);
+						}
+					}
+
 					// Logging: Verifty new control point location
 					UE_LOG(LogTemp, Log, TEXT("New Projected Location of Control Point_selectionbox_tick: %s"), *SmoothWorldLocation.ToString());
 				}
