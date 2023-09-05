@@ -193,7 +193,7 @@ void ASelectionBox::Tick(float DeltaTime)
 
 			// Perform a new raycast to get the current mouse position
 			if (GetWorld()->LineTraceSingleByChannel(hitResult, start, end, ECC_Visibility, collisionParams))
-			{	
+			{
 				// Move the selected control point mesh with the mouse
 				if (SelectedControlPoint && hitResult.bBlockingHit)
 				{
@@ -203,7 +203,7 @@ void ASelectionBox::Tick(float DeltaTime)
 						StartingLocation = SelectedControlPoint->GetComponentLocation();
 						bIsDragging = true;
 					}
-					
+
 					FVector NewLocation = hitResult.Location;
 
 					// Get the current world location of the control point
