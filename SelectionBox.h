@@ -10,8 +10,8 @@ UCLASS()
 class GARUDARIFT_API ASelectionBox : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	ASelectionBox();
 
@@ -30,7 +30,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -45,12 +45,13 @@ public:
 	void LeftClick(bool bIsPressed);
 
 	UStaticMeshComponent* SelectedControlPoint;
-	bool bIsDraggingControlPoint;
+	bool bIsDragging;
 	FVector2D StoredInitialClickLocation;
 	float TimeSinceLeftMousePressed;
 	bool bIsLeftMouseButtonHeld;
 	bool bIsLeftMousePressed;
 	bool bIsMouseOverControlPointMesh;
+	FVector StartingLocation;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
