@@ -38,8 +38,11 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* StaticMeshComponent;
 
-	// Current control point tag
-	FString CurrentSelectedTag;
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* ControlPointMesh0;
+
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* ControlPointMesh1;
 
 	// Function to accept left mouse click data
 	void LeftClick(bool bIsPressed);
@@ -52,11 +55,13 @@ public:
 	bool bIsLeftMousePressed;
 	bool bIsMouseOverControlPointMesh;
 	FVector StartingLocation;
+	FVector InitialLocationOfControlPointMesh0;
+	FVector InitialLocationOfControlPointMesh1;
+
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
 	USplineComponent* WallSpline;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Points", meta = (AllowPrivateAccess = "true"))
-	TArray<UStaticMeshComponent*> ControlPointMeshes;
+	bool bHasCapturedInitialLocation;
 };
