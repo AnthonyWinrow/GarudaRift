@@ -57,7 +57,10 @@ public:
 	FVector StartingLocation;
 	FVector InitialLocationOfControlPointMesh0;
 	FVector InitialLocationOfControlPointMesh1;
-
+	FVector LeftPosition;
+	FVector RightPosition;
+	FVector Center;
+	TMap<int32, FString> SplinePointMetadata;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
