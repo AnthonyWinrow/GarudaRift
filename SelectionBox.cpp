@@ -53,11 +53,20 @@ ASelectionBox::ASelectionBox()
 	// Get the bounding box of the static mesh
 	FBox BoundingBox = StaticMeshComponent->GetStaticMesh()->GetBoundingBox();
 
+	// Calculate initial mesh dimensions
+	InitialDimensions = BoundingBox.GetExtent();
+
+	// Logging: Verify initial dimensions
+	UE_LOG(LogTemp, Log, TEXT("Initial Dimensions of Wall Mesh_selectionbox_constructor: %s"), *InitialDimensions.ToString());
+
 	// Calculate the center of the wall
-	FVector Center = BoundingBox.GetCenter();
+	Center = BoundingBox.GetCenter();
+
+	// Set spline relative location to wall center
+	WallSpline->SetRelativeLocation(Center);
 
 	// Log the spline component initialization
-	UE_LOG(LogTemp, Log, TEXT("WallSpline Component Initialized_selectionbox_constructor"));
+	UE_LOG(LogTemp, Log, TEXT("Spline Center set to Wall Center_selectionbox_constructor: %s"), *Center.ToString());
 
 	// Find the control point mesh
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshAsset(TEXT("StaticMesh'/Engine/BasicShapes/Sphere.Sphere'"));
@@ -70,8 +79,8 @@ ASelectionBox::ASelectionBox()
 	float Offset = 15.f;
 
 	// Calculate left and right positions for the control points
-	FVector LeftPosition = Center - (WallRightVector * Offset);
-	FVector RightPosition = Center + (WallRightVector * Offset);
+	LeftPosition = Center - (WallRightVector * Offset);
+	RightPosition = Center + (WallRightVector * Offset);
 
 	// Create the control point visualizations for ControlPointPointMesh0
 	ControlPointMesh0 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ControlPointMesh0"));
@@ -103,9 +112,32 @@ void ASelectionBox::BeginPlay()
 
 	UE_LOG(LogTemp, Log, TEXT("InitialLocationOfControlPoint0_selectionbox_beginplay: %s"), *InitialLocationOfControlPointMesh0.ToString());
 
+	// Store the location of ControlPointMesh1
 	InitialLocationOfControlPointMesh1 = ControlPointMesh1->GetComponentLocation();
 
 	UE_LOG(LogTemp, Log, TEXT("InitialLocationOfControlPoint1_selectionbox_beginplay: %s"), *InitialLocationOfControlPointMesh1.ToString());
+
+	// Add control points to meshes
+	WallSpline->AddSplinePoint(Center, ESplineCoordinateSpace::World);
+	WallSpline->AddSplinePoint(InitialLocationOfControlPointMesh0, ESplineCoordinateSpace::World);
+	WallSpline->AddSplinePoint(InitialLocationOfControlPointMesh1, ESplineCoordinateSpace::World);
+
+	WallSpline->SetLocationAtSplinePoint(1, InitialLocationOfControlPointMesh0, ESplineCoordinateSpace::World);
+	WallSpline->SetLocationAtSplinePoint(2, InitialLocationOfControlPointMesh1, ESplineCoordinateSpace::World);
+
+	// Control point identification metadata
+	SplinePointMetadata.Add(0, "ControlPoint0");
+	SplinePointMetadata.Add(1, "ControlPoint1");
+	SplinePointMetadata.Add(2, "ControlPoint2");
+
+	// Get and log the locations of the control points
+	FVector ControlPoint0Location = WallSpline->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::World);
+	FVector ControlPoint1Location = WallSpline->GetLocationAtSplinePoint(1, ESplineCoordinateSpace::World);
+	FVector ControlPoint2Location = WallSpline->GetLocationAtSplinePoint(2, ESplineCoordinateSpace::World);
+
+	UE_LOG(LogTemp, Log, TEXT("ControlPoint0 is at_selectionbox_beginplay: %s"), *ControlPoint0Location.ToString());
+	UE_LOG(LogTemp, Log, TEXT("ControlPoint1 is at_selectionbox_beginplay: %s"), *ControlPoint1Location.ToString());
+	UE_LOG(LogTemp, Log, TEXT("ControlPoint2 is at_selectionbox_beginplay: %s"), *ControlPoint2Location.ToString());
 }
 
 // Called every frame
@@ -215,7 +247,7 @@ void ASelectionBox::Tick(float DeltaTime)
 					// Get the wall's normal vector
 					FVector WallNormal = StaticMeshComponent->GetForwardVector();
 
-					// Project location onto a planed defined by the wall's normal
+					// Project location onto a plane defined by the wall's normal
 					FVector PlanePoint = CurrentWorldLocation;
 					FVector ProjectedLocation = FVector::PointPlaneProject(NewLocation, PlanePoint, WallNormal);
 
@@ -230,7 +262,7 @@ void ASelectionBox::Tick(float DeltaTime)
 
 					static float InitialDotProduct = FLT_MAX;
 
-					// Clamp ControlPointmeshes
+					// Clamp ControlPointMesh0
 					if (SelectedControlPoint == ControlPointMesh0)
 					{
 						// If this is the first time we're dragging this control point, store its initial location
@@ -291,6 +323,16 @@ void ASelectionBox::Tick(float DeltaTime)
 							// Reset to initial location if trying to move to the right
 							SelectedControlPoint->SetWorldLocation(InitialLocationOfControlPointMesh0);
 						}
+
+						// Update ControlPoint1 to follow ControlPointMesh0
+						FVector ControlPointMesh0Location = ControlPointMesh0->GetComponentLocation();
+						WallSpline->SetLocationAtSplinePoint(1, ControlPointMesh0Location, ESplineCoordinateSpace::World);
+
+						// Calculate the new center based on the control points
+						FVector NewCenter = (WallSpline->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::World) + WallSpline->GetLocationAtSplinePoint()
+
+						// Logging: Check location of ControlPoint1
+						UE_LOG(LogTemp, Log, TEXT("ControlPoint1 Updated to_selectionbox_tick: %s"), *ControlPointMesh0Location.ToString());
 					}
 					else if (SelectedControlPoint == ControlPointMesh1)
 					{
@@ -328,9 +370,21 @@ void ASelectionBox::Tick(float DeltaTime)
 							// Set new clamped location
 							SelectedControlPoint->SetWorldLocation(ClampedLocation);
 						}
+						else
+						{
+							// Reset initial location if trying to move to the left
+							SelectedControlPoint->SetWorldLocation(InitialLocationOfControlPointMesh1);
+						}
+
+						// Update ControlPoint2 to follow ControlPointMesh1
+						FVector ControlPointMesh1Location = ControlPointMesh1->GetComponentLocation();
+						WallSpline->SetLocationAtSplinePoint(1, ControlPointMesh1Location, ESplineCoordinateSpace::World);
+
+						// Logging: Check control point location
+						UE_LOG(LogTemp, Log, TEXT("ControlPoint2 Updated to_selectionbox_tick: %s"), *ControlPointMesh1Location.ToString());
 					}
 
-					// Logging: Verifty new control point location
+					// Logging: Verify new control point location
 					UE_LOG(LogTemp, Log, TEXT("New Projected Location of Control Point_selectionbox_tick: %s"), *SmoothWorldLocation.ToString());
 				}
 			}
@@ -355,7 +409,12 @@ void ASelectionBox::LeftClick(bool bIsPressed)
 		// Capture initial location only once
 		bHasCapturedInitialLocation = true;
 		InitialLocationOfControlPointMesh0 = ControlPointMesh0->GetComponentLocation();
+		InitialLocationOfControlPointMesh1 = ControlPointMesh1->GetComponentLocation();
 		UE_LOG(LogTemp, Log, TEXT("Captured Initial Location_selectionbox_leftclick: %s"), *InitialLocationOfControlPointMesh0.ToString());
+
+		// Capture the initial locations of the control points only once
+		FVector ControlPoint0Location = WallSpline->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::World);
+		FVector ControlPoint1Location = WallSpline->GetLocationAtSplinePoint(1, ESplineCoordinateSpace::World);
 	}
 
 	if (!bIsLeftMousePressed)
