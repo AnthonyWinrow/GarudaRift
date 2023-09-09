@@ -4,7 +4,15 @@
 #include "GameFramework/Actor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
 #include "SelectionBox.generated.h"
+
+DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_Constructor, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_LeftClick, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_DestroyMesh, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_BeginPlay, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_Tick, Log, All);
 
 UCLASS()
 class GARUDARIFT_API ASelectionBox : public AActor
@@ -15,39 +23,41 @@ public:
 	// Sets default values for this actor's properties
 	ASelectionBox();
 
-	// Mesh to be spawned
-	UPROPERTY(EditAnywhere)
-	UStaticMeshComponent* Mesh;
-
-	// Method to destroy static mesh
 	void DestroyMesh();
-
-	// Flag to indicate if a control point is currently selected
-	UPROPERTY(BlueprintReadWrite, Category = "Control Point")
-	bool bIsControlPointSelected;
+	void LeftClick(bool bIsPressed);
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Static mesh component
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* StaticMeshComponent;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(EditAnywhere)
+	UStaticMeshComponent* ControlPointMesh;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Control Point")
+	bool bIsControlPointSelected;
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
+	USplineComponent* WallSpline;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SplineMesh", meta = (AllowPrivateAccess = "true"))
+	USplineMeshComponent* WallSplineMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Point", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* ControlPointMesh0;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Point", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* ControlPointMesh1;
 
-	// Function to accept left mouse click data
-	void LeftClick(bool bIsPressed);
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Point", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SelectedControlPoint;
+
 	bool bIsDragging;
 	FVector2D StoredInitialClickLocation;
 	float TimeSinceLeftMousePressed;
@@ -61,10 +71,8 @@ public:
 	FVector RightPosition;
 	FVector Center;
 	TMap<int32, FString> SplinePointMetadata;
-
-private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spline", meta = (AllowPrivateAccess = "true"))
-	USplineComponent* WallSpline;
+	UStaticMesh* Wall;
 
 	bool bHasCapturedInitialLocation;
+	FVector InitialWallMeshLocation;
 };
