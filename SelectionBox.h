@@ -23,6 +23,9 @@ public:
 	// Sets default values for this actor's properties
 	ASelectionBox();
 
+	UPROPERTY()
+	FVector TargetLocation;
+
 	void DestroyMesh();
 	void LeftClick(bool bIsPressed);
 
@@ -58,19 +61,22 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Control Point", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* SelectedControlPoint;
 
+	UPROPERTY()
+	TMap<int32, FString> SplinePointMetadata;
+
 	bool bIsDragging;
-	FVector2D StoredInitialClickLocation;
 	float TimeSinceLeftMousePressed;
 	bool bIsLeftMouseButtonHeld;
 	bool bIsLeftMousePressed;
 	bool bIsMouseOverControlPointMesh;
+	bool bHasLoggedTickEntry;
 	FVector StartingLocation;
 	FVector InitialLocationOfControlPointMesh0;
 	FVector InitialLocationOfControlPointMesh1;
 	FVector LeftPosition;
 	FVector RightPosition;
 	FVector Center;
-	TMap<int32, FString> SplinePointMetadata;
+	FVector2D StoredInitialClickLocation;
 	UStaticMesh* Wall;
 
 	bool bHasCapturedInitialLocation;
