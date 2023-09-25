@@ -66,19 +66,22 @@ void ASelectionBox::BeginPlay()
 	Super::BeginPlay();
 
 	int32 NumPoints = WallSpline->GetNumberOfSplinePoints();
+	FVector Offset(0, 0, 50);
 	for (int32 i = 0; i < NumPoints; ++i)
 	{
 		FVector Location;
 		FVector Tangent;
 		WallSpline->GetLocationAndTangentAtSplinePoint(i, Location, Tangent, ESplineCoordinateSpace::World);
 
+		FVector MeshLocation = Location + Offset;
+
 		if (i == 0)
 		{
-			SplinePointMesh0->SetWorldLocation(Location);
+			SplinePointMesh0->SetWorldLocation(MeshLocation);
 		}
 		else if (i == 1)
 		{
-			SplinePointMesh1->SetWorldLocation(Location);
+			SplinePointMesh1->SetWorldLocation(MeshLocation);
 		}
 
 		DrawDebugSphere(GetWorld(), Location, 10.0f, 12, FColor::Blue, true, -1, 0, 1);
@@ -161,6 +164,32 @@ void ASelectionBox::Tick(float DeltaTime)
 	{
 		UE_LOG(LogSelectionBox_Tick, Log, TEXT("bIsDragging: %s"), bIsDragging ? TEXT("True") : TEXT("False"));
 		bLastIsDragging = bIsDragging;
+	}
+
+	if (bIsDragging)
+	{
+		FVector WorldLocation, WorldDirection;
+		PlayerController->DeprojectMousePositionToWorld(WorldLocation, WorldDirection);
+
+		FVector NewLocation = WorldLocation + WorldDirection * 1000;
+		FVector RightVector = SplinePointMesh0->GetRightVector();
+		FVector ProjectedLocation = FVector::VectorPlaneProject(NewLocation, RightVector);
+		FVector Start = ProjectedLocation;
+		FVector End = ((FVector(0, 0, 1) * 2000.0f) + ProjectedLocation);
+		FHitResult GroundHitResult;
+
+		GetWorld()->LineTraceSingleByChannel(GroundHitResult, Start, End, ECC_Visibility);
+
+		if (GroundHitResult.bBlockingHit)
+		{
+			float GroundLevel = GroundHitResult.ImpactPoint.Z;
+			if (ProjectedLocation.Z < GroundLevel)
+			{
+				ProjectedLocation.Z = GroundLevel;
+			}
+		}
+
+		SplinePointMesh0->SetWorldLocation(ProjectedLocation);
 	}
 }
 
