@@ -7,6 +7,11 @@
 #include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/Engine/Classes/Kismet/GameplayStatics.h"
 #include "E:/EpicGames/UE_5.2/Engine/Source/Runtime/Engine/Classes/Engine/World.h"
 
+DEFINE_LOG_CATEGORY(LogBuildMode_Cameras);
+DEFINE_LOG_CATEGORY(LogBuildMode_Movement);
+DEFINE_LOG_CATEGORY(LogBuildMode_Inputs);
+DEFINE_LOG_CATEGORY(LogBuildMode_Destruction);
+
 // Sets default values
 UBuildMode::UBuildMode()
 {
@@ -18,7 +23,7 @@ UBuildMode::UBuildMode()
 
 void UBuildMode::UpdateCursorVisibility()
 {
-    if (Orion && Orion->bIsRightMousePressed)
+    if (Orion && Orion->bRightMousePressed)
     {
         // Hide mouse cursor
         APlayerController* PlayerController = Cast<APlayerController>(Orion->GetController());
@@ -27,20 +32,6 @@ void UBuildMode::UpdateCursorVisibility()
             PlayerController->bShowMouseCursor = false;
             PlayerController->bEnableClickEvents = false;
             PlayerController->bEnableMouseOverEvents = false;
-
-            FVector2D MousePosition;
-            if (PlayerController->GetMousePosition(MousePosition.X, MousePosition.Y))
-            {
-                FVector2D ViewportSize = FVector2D(GEngine->GameViewport->Viewport->GetSizeXY());
-
-                // Ceck if the mouse is at the screen edge and wrap it to the other side
-                if (MousePosition.X <= 0) MousePosition.X = ViewportSize.X - 1;
-                if (MousePosition.Y <= 0) MousePosition.Y = ViewportSize.Y - 1;
-                if (MousePosition.X >= ViewportSize.X) MousePosition.X = 1;
-                if (MousePosition.Y >= ViewportSize.Y) MousePosition.Y = 1;
-
-                PlayerController->SetMouseLocation(MousePosition.X, MousePosition.Y);
-            }
         }
     }
     else
@@ -58,7 +49,7 @@ void UBuildMode::UpdateCursorVisibility()
 
 void UBuildMode::MoveForward(float Value)
 {
-    if (bIsBuildModeActive && Orion && Orion->bIsRightMousePressed && Orion->FollowCamera)
+    if (bIsBuildModeActive && Orion && Orion->bRightMousePressed && Orion->FollowCamera)
     {
         // Define a movement speed
         float MoveSpeed = 200.0f;
@@ -85,7 +76,7 @@ void UBuildMode::MoveForward(float Value)
 
 void UBuildMode::MoveRight(float Value)
 {
-    if (bIsBuildModeActive && Orion && Orion->bIsRightMousePressed && Orion->FollowCamera)
+    if (bIsBuildModeActive && Orion && Orion->bRightMousePressed && Orion->FollowCamera)
     {
         // Define a movement speed
         float MoveSpeed = 200.0f;
@@ -116,7 +107,7 @@ void UBuildMode::Turn(float Value)
     {
         if (Orion)
         {
-            if (!Orion->bIsRightMousePressed)
+            if (!Orion->bRightMousePressed)
             {
                 // If the middle mouse button is not pressed, then exit the function early
                 return;
@@ -138,6 +129,9 @@ void UBuildMode::Zoom(float Value)
 {
     if (Orion)
     {
+        float ZoomRange = 1000.0f;
+        float MinCameraHeight = 600.0f;
+
         // Check if the camera has stopped moving and we haven't updated the initial height yet
         if (!Orion->bIsCameraMoving && !bHasUpdatedInitialCameraHeight)
         {
@@ -170,7 +164,7 @@ void UBuildMode::Zoom(float Value)
             float ZoomSpeed = 800.0f;
 
             // Define a forward movement factor to control how much the camera moves forward
-            float ForwardFactor = 200.0f;
+            float ForwardFactor = 400.0f;
 
             // Calculate the movement amount of the zoom
             FVector ZoomAmount = FVector(0, 0, Orion->FollowCamera->GetForwardVector().Z) * Value * ZoomSpeed * GetWorld()->GetDeltaSeconds();
@@ -179,13 +173,13 @@ void UBuildMode::Zoom(float Value)
             FVector PredictedZoomLocation = Orion->FollowCamera->GetComponentLocation() + ZoomAmount;
 
             // Clamp the height based on initial height
-            float ClampedHeight = FMath::Clamp(PredictedZoomLocation.Z, InitialCameraHeight - 450.0f, InitialCameraHeight);
+            float ClampedHeight = FMath::Clamp(PredictedZoomLocation.Z, FMath::Max(InitialCameraHeight - ZoomRange, MinCameraHeight), InitialCameraHeight);
             PredictedZoomLocation.Z = ClampedHeight;
 
             // Initialize forward movement amount
             FVector ForwardAmount = FVector::ZeroVector;
                 
-            if (ClampedHeight > InitialCameraHeight - 450.0f && ClampedHeight < InitialCameraHeight)
+            if (ClampedHeight > InitialCameraHeight - 400.0f && ClampedHeight < InitialCameraHeight)
             {
                 ForwardAmount = Orion->FollowCamera->GetForwardVector() * Value * ForwardFactor * GetWorld()->GetDeltaSeconds();
                 ForwardAmount.Z = 0;
@@ -200,7 +194,7 @@ void UBuildMode::Zoom(float Value)
             float ZoomRatio = (ClampedHeight - (InitialCameraHeight - 450.0f)) / 450.0f;
 
             // Calculate the desired pitch changed based on zoom ratio
-            float DesiredPitch = FMath::Lerp(-22.0f, -55.0f, ZoomRatio);
+            float DesiredPitch = FMath::Lerp(-50.0f, -55.0f, ZoomRatio);
 
             // Apply the pitch change to orion's follow camera
             FRotator NewRotation(DesiredPitch, Orion->FollowCamera->GetRelativeRotation().Yaw, Orion->FollowCamera->GetRelativeRotation().Roll);
@@ -226,14 +220,16 @@ void UBuildMode::ActivateBuildMode()
 
 void UBuildMode::DeactivateBuildMode()
 {
-    UE_LOG(LogTemp, Log, TEXT("Deactivate BuildMode Function Called_buildmode_deactivatebuildmode"));
+    UE_LOG(LogBuildMode_Destruction, Warning, TEXT("Entering DeactivateBuildMode"));
 
     bIsBuildModeActive = false;
 
-    // Call DestroyMesh from SelectionBox class
     if (SelectionBox)
     {
         SelectionBox->DestroyMesh();
+        SelectionBox->Destroy();
+        SelectionBox = nullptr;
+        UE_LOG(LogBuildMode_Destruction, Log, TEXT("SelectionBox Destroyed"));
     }
 }
 
@@ -297,8 +293,14 @@ void UBuildMode::LeftClick(bool bIsPressed)
     {
         FVector ClickLocation = HitResult.Location;
 
+            //FVector CameraForwardVector = ViewRotation.Vector();
+            FRotator NewRotation = FRotator::ZeroRotator;
+            NewRotation.Yaw += 0.0f;
+            NewRotation.Pitch = 0.0f;
+            NewRotation.Roll = 0.0f;
+
         // Spawn a new selection box actor at the click location
-        SelectionBox = GetWorld()->SpawnActor<ASelectionBox>(ASelectionBox::StaticClass(), ClickLocation, FRotator(0));
+        SelectionBox = GetWorld()->SpawnActor<ASelectionBox>(ASelectionBox::StaticClass(), ClickLocation, NewRotation);
 
         // Log the action
         UE_LOG(LogTemp, Log, TEXT("SelectionBox Spawned at Location: %s_buildmode_leftclick"), *ClickLocation.ToString());
@@ -311,4 +313,15 @@ void UBuildMode::LeftClick(bool bIsPressed)
             UE_LOG(LogTemp, Log, TEXT("SelectionBox LeftClick Method Called_buildmode_leftclick"));
         }
     }
+}
+
+void UBuildMode::RightClick(bool bRightPressed)
+{
+    UE_LOG(LogTemp, Warning, TEXT("EnteringRightClick_buildmode_rightclick"));
+    bIsRightMouseCurrentlyPressed = bRightPressed;
+  
+    if (IsValid(SelectionBox))
+    {
+        SelectionBox->RightClick(bRightPressed);
+    } 
 }
