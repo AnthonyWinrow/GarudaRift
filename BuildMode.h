@@ -7,6 +7,11 @@
 #include "E:/Unreal Projects/GarudaRift/Source/GarudaRift/ActorClasses/SelectionBox.h"
 #include "BuildMode.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogBuildMode_Cameras, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogBuildMode_Movement, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogBuildMode_Inputs, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogBuildMode_Destruction, Log, All);
+
 class AOrion;
 
 UCLASS()
@@ -18,48 +23,29 @@ public:
     // Sets default values
     UBuildMode();
 
-    // Input Methods
     void MoveForward(float Value);
     void MoveRight(float Value);
     void Turn(float Value);
     void Zoom(float Value);
-
-    // Function Methods
     void LeftClick(bool bIsPressed);
-    bool bIsLeftMouseCurrentlyPressed;
-
-    // Indicates whether build mode is active
-    bool bIsBuildModeActive;
-
-    // Indicates whether the user is currently dragging the mouse
-    bool bIsDragging;
-
-    // Activates build mode
+    void RightClick(bool bRightPressed);
+    void UpdateCursorVisibility();
     void ActivateBuildMode();
-
-    // Deactivates build mode
     void DeactivateBuildMode();
 
-    // Check if build mode is active
-    bool IsBuildModeActive();
-
-    // Camera turn speed
-    float TurnSpeed;
-
-    // Zoom Range Variables
-    float InitialCameraHeight;
+    bool bIsLeftMouseCurrentlyPressed;
+    bool bIsRightMouseCurrentlyPressed;
+    bool bIsSelectionBoxSpawned = false;
+    bool bRightMousePressed;
+    bool bIsBuildModeActive;
+    bool bIsDragging;
     bool bHasUpdatedInitialCameraHeight;
-
-    // Handles mouse visibility
-    void UpdateCursorVisibility();
-
-    // Pointer to Orion
+    bool IsBuildModeActive();
+    float TurnSpeed;
+    float InitialCameraHeight;
+    
     AOrion* Orion;
-
-    // Pointer to the world (needed to spawn actors)
     UWorld* World;
-
-    // Pointer to SelectionBox
     ASelectionBox* SelectionBox;
 
 private:
