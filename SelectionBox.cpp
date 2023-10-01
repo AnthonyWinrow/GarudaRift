@@ -4,6 +4,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h" 
 #include "UObject/ConstructorHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogSelectionBox_Constructor);
@@ -28,10 +29,26 @@ ASelectionBox::ASelectionBox()
 	bLastMouseHeld = false;
 	bLastIsDragging = false;
 	bInitialMousePositionSet = false;
-	bIsDraggingSplinePointMesh = false;
+	bIsDraggingSplinePointMesh0 = false;
+	bIsDraggingSplinePointMesh1 = false;
+	bClamped = false;
+	MouseSpeed = 0.25f;
 
 	WallSpline = CreateDefaultSubobject<USplineComponent>(TEXT("WallSpline"));
 	RootComponent = WallSpline;
+
+	WallVolume = CreateDefaultSubobject<USplineMeshComponent>(TEXT("WallVolume"));
+	WallVolume->SetMobility(EComponentMobility::Movable);
+
+	Wall = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), NULL, TEXT("/Game/GarudaRift/Meshes/Architecture/VFX/SelectionBox_garudarift.SelectionBox_garudarift")));
+	if (Wall)
+	{
+		WallVolume->SetStaticMesh(Wall);
+	}
+	else
+	{
+		UE_LOG(LogSelectionBox_Constructor, Error, TEXT("Failed to Load WallVolume Mesh"));
+	}
 
 	StaticMeshParent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshParent"));
 	StaticMeshParent->SetupAttachment(RootComponent);
@@ -87,12 +104,10 @@ void ASelectionBox::BeginPlay()
 		{
 			Mesh1Location = Location + Offset;
 			SplinePointMesh1->SetWorldLocation(Mesh1Location);
+			InitialLocationOfSplinePointMesh1 = Mesh1Location;
 		}
 
-		DrawDebugSphere(GetWorld(), Location, 10.0f, 12, FColor::Blue, true, -1, 0, 1);
-
 		FVector ControlPoint = Location + Tangent;
-		DrawDebugBox(GetWorld(), ControlPoint, FVector(5.0f, 5.0f, 5.0f), FColor::White, true, -1, 0, 1);
 	}
 
 	for (int32 i = 0; i < NumPoints - 1; ++i)
@@ -100,9 +115,21 @@ void ASelectionBox::BeginPlay()
 		FVector StartLocation, StartTangent, EndLocation, EndTangent;
 		WallSpline->GetLocationAndTangentAtSplinePoint(i, StartLocation, StartTangent, ESplineCoordinateSpace::World);
 		WallSpline->GetLocationAndTangentAtSplinePoint(i + 1, EndLocation, EndTangent, ESplineCoordinateSpace::World);
-
-		DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Green, true, -1, 0, 1);
 	}
+
+	if (WallVolume && WallSpline)
+	{
+		FVector StartLocation, StartTangent, EndLocation, EndTangent;
+		WallSpline->GetLocationAndTangentAtSplinePoint(0, StartLocation, StartTangent, ESplineCoordinateSpace::World);
+		WallSpline->GetLocationAndTangentAtSplinePoint(1, EndLocation, EndTangent, ESplineCoordinateSpace::World);
+
+		WallVolume->SetStartAndEnd(StartLocation, StartTangent, EndLocation, EndTangent);
+		WallVolume->SetupAttachment(WallSpline);
+	}
+	else
+	{
+		UE_LOG(LogSelectionBox_BeginPlay, Error, TEXT("WallVolume or WallSpline is Null"));
+	}	
 }
 
 // Called every frame
@@ -139,7 +166,7 @@ void ASelectionBox::Tick(float DeltaTime)
 		if (HitResult.IsValidBlockingHit() && (HitResult.GetComponent() == SplinePointMesh0 || HitResult.GetComponent() == SplinePointMesh1))
 		{
 			TimeMousePressed += DeltaTime;
-			if (TimeMousePressed >= 0.5f)
+			if (TimeMousePressed >= 0.2f)
 			{
 				bIsDragging = true;
 			}
@@ -154,75 +181,190 @@ void ASelectionBox::Tick(float DeltaTime)
 	static FVector TargetLocation;
 	static FVector LastLocation;
 	static FVector SmoothedTargetLocation;
+	static FVector2D LastMousePosition;
 	static bool bFirstDrag = true;
 	FVector CurrentLocation;
 	FVector HitLocation;
 
+	if (bIsRightMousePressed)
+	{
+		FVector2D CurrentMousePosition;
+		PlayerController->GetMousePosition(CurrentMousePosition.X, CurrentMousePosition.Y);
+
+		if (LastMousePosition != CurrentMousePosition)
+		{
+			int32 ScreenWidth, ScreenHeight;
+			PlayerController->GetViewportSize(ScreenWidth, ScreenHeight);
+			FVector2D CenterOfScreen = FVector2D(ScreenWidth, ScreenHeight) / 2.0f;
+			PlayerController->SetMouseLocation(FMath::FloorToInt(CenterOfScreen.X), FMath::FloorToInt(CenterOfScreen.Y));
+		}
+
+		LastMousePosition = CurrentMousePosition;
+	}
+
 	if (PlayerController)
 	{
-		if (bIsDragging && HitResult.IsValidBlockingHit() && HitResult.GetComponent() == SplinePointMesh0)
+		if (bIsDragging && HitResult.IsValidBlockingHit())
 		{
-			bIsDraggingSplinePointMesh = true;
+			if (HitResult.GetComponent() == SplinePointMesh0)
+			{
+				bIsDraggingSplinePointMesh0 = true;
+				bIsDraggingSplinePointMesh1 = false;
+				bDraggingAnySplinePointMesh = true;
+			}
+			else if (HitResult.GetComponent() == SplinePointMesh1)
+			{
+				bIsDraggingSplinePointMesh1 = true;
+				bIsDraggingSplinePointMesh0 = false;
+				bDraggingAnySplinePointMesh = true;
+			}
 		}
 
 		if (!bIsDragging)
 		{
-			bIsDraggingSplinePointMesh = false;
+			bIsDraggingSplinePointMesh0 = false;
+			bIsDraggingSplinePointMesh1 = false;
+			bDraggingAnySplinePointMesh = false;
 		}
 
-		if (bIsDragging && bIsDraggingSplinePointMesh)
+		if (bIsDragging && (bIsDraggingSplinePointMesh0 || bIsDraggingSplinePointMesh1))
 		{
-			CurrentLocation = SplinePointMesh0->GetComponentLocation();
+			USceneComponent* TargetMesh = bIsDraggingSplinePointMesh0 ? SplinePointMesh0 : SplinePointMesh1;
+			FVector InitialLocation = bIsDraggingSplinePointMesh0 ? InitialLocationOfSplinePointMesh0 : InitialLocationOfSplinePointMesh1;
+
+			CurrentLocation = TargetMesh->GetComponentLocation();
 			HitLocation = HitResult.Location;
 
 			if (FVector::DistSquared(HitLocation, LastLocation) > FMath::Square(1.0f))
 			{
-				if (bFirstDrag)
-				{
-					TargetLocation = CurrentLocation;
-					SmoothedTargetLocation = TargetLocation;
-					bFirstDrag = false;
-				}
-
+				FVector DragDistance = HitLocation - CurrentLocation;
 				FVector WallSplineForwardVector = WallSpline->GetForwardVector();
 				FVector PlanePoint = CurrentLocation;
 				FVector PlaneNormal = FVector(0, 0, 1);
 				FVector ProjectedHitLocation = HitLocation - ((HitLocation - PlanePoint) | PlaneNormal) * PlaneNormal;
-				FVector DirectionToHit = (HitLocation - CurrentLocation).GetSafeNormal();
-				float DotProduct = FVector::DotProduct(DirectionToHit, WallSplineForwardVector);
-				FVector ConstrainedTarget = CurrentLocation + WallSplineForwardVector * DotProduct * 100.0f;
-				float DistanceToCursor = FVector::Dist(CurrentLocation, ProjectedHitLocation);
-				float DynamicAlpha = FMath::Clamp(DistanceToCursor / 100.0f, 1.0f, 4.0f);
-				FVector NewLocation = FMath::VInterpTo(CurrentLocation, ConstrainedTarget, DeltaTime, DynamicAlpha);
+				FVector DesiredMovement = HitLocation - CurrentLocation;
+				FVector ConstrainedMovement = FVector::DotProduct(DesiredMovement, WallSplineForwardVector) * WallSplineForwardVector;
+				ConstrainedMovement *= MouseSpeed;
 
-				if (FVector::DistSquared(NewLocation, LastLocation) > FMath::Square(1.0f))
+				if (bIsDraggingSplinePointMesh0)
 				{
-					SplinePointMesh0->SetWorldLocation(NewLocation);
+					if (ConstrainedMovement.X > 0 && CurrentLocation.X >= InitialLocation.X)
+					{
+						ConstrainedMovement.X = 0;
+					}
+					if (ConstrainedMovement.Y > 0 && CurrentLocation.Y >= InitialLocation.Y)
+					{
+						ConstrainedMovement.Y = 0;
+					}
+					if (ConstrainedMovement.Z > 0 && CurrentLocation.Z >= InitialLocation.Z)
+					{
+						ConstrainedMovement.Z = 0;
+					}
+				}
+				else if (bIsDraggingSplinePointMesh1)
+				{
+					if (ConstrainedMovement.X < 0 && CurrentLocation.X <= InitialLocation.X)
+					{
+						ConstrainedMovement.X = 0;
+					}
+					if (ConstrainedMovement.Y < 0 && CurrentLocation.Y <= InitialLocation.Y)
+					{
+						ConstrainedMovement.Y = 0;
+					}
+					if (ConstrainedMovement.Z < 0 && CurrentLocation.Z <= InitialLocation.Z)
+					{
+						ConstrainedMovement.Z = 0;
+					}
 				}
 
+				FVector NewLocation = CurrentLocation + ConstrainedMovement;
+
+				if (bIsDraggingSplinePointMesh0)
+				{
+					if (NewLocation.X > InitialLocation.X)
+					{
+						NewLocation.X = InitialLocation.X;
+					}
+					if (NewLocation.Y > InitialLocation.Y)
+					{
+						NewLocation.Y = InitialLocation.Y;
+					}
+					if (NewLocation.Z > InitialLocation.Z)
+					{
+						NewLocation.Z = InitialLocation.Z;
+					}
+				}
+				else if (bIsDraggingSplinePointMesh1)
+				{
+					if (NewLocation.X < InitialLocation.X)
+					{
+						NewLocation.X = InitialLocation.X;
+					}
+					if (NewLocation.Y < InitialLocation.Y)
+					{
+						NewLocation.Y = InitialLocation.Y;
+					}
+					if (NewLocation.Z < InitialLocation.Z)
+					{
+						NewLocation.Z = InitialLocation.Z;
+					}
+				}
+
+				TargetMesh->SetWorldLocation(NewLocation);
 				LastLocation = HitLocation;
-			}
 
-			PlayerController->bShowMouseCursor = false;
-			PlayerController->SetShowMouseCursor(false);
+				if (NewLocation.Equals(InitialLocation, 1.0f))
+				{
+					FVector2D ScreenLocation;
+					PlayerController->ProjectWorldLocationToScreen(InitialLocation, ScreenLocation);
+					PlayerController->SetMouseLocation(FMath::FloorToInt(ScreenLocation.X), FMath::FloorToInt(ScreenLocation.Y));
+				}
 
-			if (!bIsDragging)
-			{
-				FVector SnapLocation = FMath::VInterpTo(CurrentLocation, HitLocation, DeltaTime, 10.0f);
-				SplinePointMesh0->SetWorldLocation(SnapLocation);
+				UE_LOG(LogSelectionBox_Tick, Log, TEXT("NewLocation =: %s"), *NewLocation.ToString());
+
+				if (TargetMesh == SplinePointMesh0)
+				{
+					FVector CurrentLocation0 = WallSpline->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::World);
+					FVector UpdatedLocation0 = FVector(NewLocation.X, NewLocation.Y, CurrentLocation0.Z);
+					WallSpline->SetLocationAtSplinePoint(0, UpdatedLocation0, ESplineCoordinateSpace::World);
+				}
+				else if (TargetMesh == SplinePointMesh1)
+				{
+					FVector CurrentLocation1 = WallSpline->GetLocationAtSplinePoint(1, ESplineCoordinateSpace::World);
+					FVector UpdatedLocation1 = FVector(NewLocation.X, NewLocation.Y, CurrentLocation1.Z);
+					WallSpline->SetLocationAtSplinePoint(1, UpdatedLocation1, ESplineCoordinateSpace::World);
+				}
+
+				if (WallSpline && WallVolume)
+				{
+					FVector LocalStartPoint = WallSpline->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::World);
+					FVector LocalEndPoint = WallSpline->GetLocationAtSplinePoint(1, ESplineCoordinateSpace::World);
+					FVector StartTangent = WallSpline->GetTangentAtSplinePoint(0, ESplineCoordinateSpace::World);
+					FVector EndTangent = WallSpline->GetTangentAtSplinePoint(1, ESplineCoordinateSpace::World);
+
+					WallVolume->SetStartAndEnd(LocalStartPoint, StartTangent, LocalEndPoint, EndTangent);
+				}
 			}
 		}
 	}
-	else
-	{
-		PlayerController->bShowMouseCursor = true;
-		PlayerController->SetShowMouseCursor(true);
-	}
-	
+
 	if (bIsDragging != bLastIsDragging)
 	{
 		UE_LOG(LogSelectionBox_Tick, Log, TEXT("bIsDragging: %s"), bIsDragging ? TEXT("True") : TEXT("False"));
 		bLastIsDragging = bIsDragging;
+	}
+	UE_LOG(LogSelectionBox_Tick, Log, TEXT("InitialLocationOfSplinePointMesh0 =: %s"), *InitialLocationOfSplinePointMesh0.ToString());
+	UE_LOG(LogSelectionBox_Tick, Log, TEXT("CurrentLocation =: %s"), *CurrentLocation.ToString());
+	UE_LOG(LogSelectionBox_Tick, Log, TEXT("HitLocation =: %s"), *HitLocation.ToString());
+	UE_LOG(LogSelectionBox_Tick, Log, TEXT("LastLocation =: %s"), *LastLocation.ToString());
+
+	if (bIsDragging || bIsRightMousePressed)
+	{
+		PlayerController->bShowMouseCursor = false;
+	}
+	else if (!bIsDragging || !bIsRightMousePressed)
+	{
+		PlayerController->bShowMouseCursor = true;
 	}
 }
 
@@ -261,4 +403,22 @@ void ASelectionBox::RightClick(bool bRightPressed)
 void ASelectionBox::DestroyMesh()
 {
 	UE_LOG(LogSelectionBox_DestroyMesh, Warning, TEXT("Entering DestroyMesh"));
+
+	if (WallVolume)
+	{
+		WallVolume->DestroyComponent();
+		WallVolume = nullptr;
+	}
+
+	if (SplinePointMesh0)
+	{
+		SplinePointMesh0->DestroyComponent();
+		SplinePointMesh0 = nullptr;
+	}
+
+	if (SplinePointMesh1)
+	{
+		SplinePointMesh1->DestroyComponent();
+		SplinePointMesh1 = nullptr;
+	}
 }
