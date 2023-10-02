@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -16,6 +14,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_LeftClick, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_RightClick, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_DestroyMesh, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_WrapMouseAtScreenEdge, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogSelectionBox_MeshBending, Log, All);
 
 UCLASS()
 class GARUDARIFT_API ASelectionBox : public AActor
@@ -48,8 +47,23 @@ public:
 	UStaticMeshComponent* SplinePointMesh1;
 
 	UPROPERTY()
+	UStaticMeshComponent* BendPointMesh;
+
+	UPROPERTY()
 	UStaticMesh* Wall;
 
+	void InitializeSplinePoints();
+	void InitializeSplineTangents();
+	void InitializeWallVolume();
+	void InitializeBendPointMesh();
+	void UpdateMousePositionAndHitResult();
+	void UpdateCursorType();
+	void HandleMousePress(float DeltaTime);
+	void DraggableComponents();
+	void DragLogic();
+	void UpdateSplineAndVolume();
+	void CursorVisibility();
+	void MeshBending(float DeltaTime);
 	void LeftClick(bool bIsPressed);
 	void RightClick(bool bRightPressed);
 	void DestroyMesh();
@@ -59,6 +73,7 @@ public:
 	bool bDraggingAnySplinePointMesh;
 	bool bIsDraggingSplinePointMesh0;
 	bool bIsDraggingSplinePointMesh1;
+	bool bDraggingBendPointMesh;
 	bool bMouseHeld;
 	bool bLastMouseHeld;
 	bool bLastIsDragging;
@@ -66,6 +81,7 @@ public:
 	bool bDrawDebugShapes;
 	float MouseSpeed;
 	float TimeMousePressed;
+	FVector Offset;
 	FVector NewMesh0Location;
 	FVector NewMesh1Location;
 	FVector Mesh0Location;
@@ -73,6 +89,10 @@ public:
 	FVector PreviousDragDirection = FVector::ZeroVector;
 	FVector InitialLocationOfSplinePointMesh0;
 	FVector InitialLocationOfSplinePointMesh1;
+	FVector InitialLocationOfBendPointMesh;
+	FVector MasterRightVector;
+	FHitResult HitResult;
+	APlayerController* PlayerController;
 
 protected:
 	// Called when the game starts or when spawned
@@ -82,6 +102,7 @@ private:
 	bool bInitialMousePositionSet;
 	FVector InitialMousePosition;
 	FVector InitialOffset;
+	FVector2D LastMousePosition;
 	TArray<FVector> ConstrainedTargetHistory;
 	const int HistorySize = 5;
 };
