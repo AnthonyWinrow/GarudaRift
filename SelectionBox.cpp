@@ -6,6 +6,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h" 
 #include "UObject/ConstructorHelpers.h"
+#include "Materials/Material.h"
 
 DEFINE_LOG_CATEGORY(LogSelectionBox_Constructor);
 DEFINE_LOG_CATEGORY(LogSelectionBox_BeginPlay);
@@ -50,6 +51,16 @@ ASelectionBox::ASelectionBox()
 		UE_LOG(LogSelectionBox_Constructor, Error, TEXT("Failed to Load WallVolume Mesh"));
 	}
 
+	UMaterial* WallMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, TEXT("/Game/GarudaRift/Materials/VFX/SelectionVolume.SelectionVolume")));
+	if (WallMaterial)
+	{
+		WallVolume->SetMaterial(0, WallMaterial);
+	}
+	else
+	{
+		UE_LOG(LogSelectionBox_Constructor, Error, TEXT("Failed to Load WallVolume Material"));
+	}
+
 	StaticMeshParent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshParent"));
 	StaticMeshParent->SetupAttachment(RootComponent);
 
@@ -59,24 +70,26 @@ ASelectionBox::ASelectionBox()
 	SplinePointMesh1 = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SplinePointMesh1"));
 	SplinePointMesh1->SetupAttachment(StaticMeshParent);
 
-	BendPointMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BendPointMesh"));
-	BendPointMesh->SetupAttachment(StaticMeshParent);
-
 	FVector NewScale = FVector(0.2f, 0.2f, 0.2f);
 	SplinePointMesh0->SetWorldScale3D(NewScale);
 	SplinePointMesh1->SetWorldScale3D(NewScale);
-	BendPointMesh->SetWorldScale3D(NewScale);
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMeshAsset(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	if (SphereMeshAsset.Succeeded())
 	{
 		SplinePointMesh0->SetStaticMesh(SphereMeshAsset.Object);
 		SplinePointMesh1->SetStaticMesh(SphereMeshAsset.Object);
-		BendPointMesh->SetStaticMesh(SphereMeshAsset.Object);
 	}
 	else
 	{
 		UE_LOG(LogSelectionBox_Constructor, Error, TEXT("SplinePointMesh Initialization = Failed"));
+	}
+
+	UMaterial* ControlPointMaterial = Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), NULL, TEXT("/Game/GarudaRift/Materials/VFX/ControlPoint.ControlPoint")));
+	if (ControlPointMaterial)
+	{
+		SplinePointMesh0->SetMaterial(0, ControlPointMaterial);
+		SplinePointMesh1->SetMaterial(0, ControlPointMaterial);
 	}
 
 	UE_LOG(LogSelectionBox_Constructor, Log, TEXT("Entering Constructor"));
@@ -93,7 +106,6 @@ void ASelectionBox::BeginPlay()
 	InitializeSplinePoints();
 	InitializeSplineTangents();
 	InitializeWallVolume();
-	InitializeBendPointMesh();
 }
 
 void ASelectionBox::Tick(float DeltaTime)
@@ -107,7 +119,6 @@ void ASelectionBox::Tick(float DeltaTime)
 	DragLogic();
 	UpdateSplineAndVolume();
 	CursorVisibility();
-	MeshBending(DeltaTime);
 }
 
 void ASelectionBox::InitializeSplinePoints()
@@ -163,22 +174,6 @@ void ASelectionBox::InitializeWallVolume()
 	}
 }
 
-void ASelectionBox::InitializeBendPointMesh()
-{
-	FVector StartPoint = WallSpline->GetLocationAtSplinePoint(0, ESplineCoordinateSpace::World);
-	FVector EndPoint = WallSpline->GetLocationAtSplinePoint(1, ESplineCoordinateSpace::World);
-	FVector MidPoint = (StartPoint + EndPoint) / 2;
-	FVector MasterForwardVector = (EndPoint - StartPoint).GetSafeNormal();
-	MasterRightVector = FVector::CrossProduct(MasterForwardVector, FVector::UpVector).GetSafeNormal();
-
-	WallSpline->AddSplinePoint(MidPoint, ESplineCoordinateSpace::World);
-
-	FVector NewBendPointMeshLocation = MidPoint + (MasterRightVector * 20.0f) + Offset;
-	BendPointMesh->SetWorldLocation(NewBendPointMeshLocation);
-
-	InitialLocationOfBendPointMesh = NewBendPointMeshLocation;
-}
-
 void ASelectionBox::UpdateMousePositionAndHitResult()
 {
 	PlayerController = GetWorld()->GetFirstPlayerController();
@@ -222,10 +217,6 @@ void ASelectionBox::HandleMousePress(float DeltaTime)
 				{
 					bIsDragging = true;
 				}
-				else if (HitResult.GetComponent() == BendPointMesh)
-				{
-					bDraggingBendPointMesh = true;
-				}
 			}
 		}		
 	}
@@ -233,7 +224,6 @@ void ASelectionBox::HandleMousePress(float DeltaTime)
 	{
 		TimeMousePressed = 0.0f;
 		bIsDragging = false;
-		bDraggingBendPointMesh = false;
 	}
 
 	if (bIsRightMousePressed)
@@ -264,13 +254,13 @@ void ASelectionBox::DraggableComponents()
 			{
 				bIsDraggingSplinePointMesh0 = true;
 				bIsDraggingSplinePointMesh1 = false;
-				bDraggingAnySplinePointMesh = true;
+				bDraggingEndPointMesh = true;
 			}
 			else if (HitResult.GetComponent() == SplinePointMesh1)
 			{
 				bIsDraggingSplinePointMesh1 = true;
 				bIsDraggingSplinePointMesh0 = false;
-				bDraggingAnySplinePointMesh = true;
+				bDraggingEndPointMesh = true;
 			}
 		}
 
@@ -278,7 +268,7 @@ void ASelectionBox::DraggableComponents()
 		{
 			bIsDraggingSplinePointMesh0 = false;
 			bIsDraggingSplinePointMesh1 = false;
-			bDraggingAnySplinePointMesh = false;
+			bDraggingEndPointMesh = false;
 		}
 	}
 }
@@ -302,7 +292,7 @@ void ASelectionBox::DragLogic()
 		if (FVector::DistSquared(HitLocation, LastLocation) > FMath::Square(1.0f))
 		{
 			FVector DragDistance = HitLocation - CurrentLocation;
-			FVector WallSplineForwardVector = WallSpline->GetForwardVector();
+			FVector WallSplineForwardVector = WallSpline->GetForwardVector().GetSafeNormal();
 			FVector PlanePoint = CurrentLocation;
 			FVector PlaneNormal = FVector(0, 0, 1);
 			FVector ProjectedHitLocation = HitLocation - ((HitLocation - PlanePoint) | PlaneNormal) * PlaneNormal;
@@ -417,50 +407,13 @@ void ASelectionBox::UpdateSplineAndVolume()
 
 void ASelectionBox::CursorVisibility()
 {
-	if (bIsDragging || bDraggingBendPointMesh || bIsRightMousePressed)
+	if (bIsDragging || bIsRightMousePressed)
 	{
 		PlayerController->bShowMouseCursor = false;
 	}
-	else if (!bIsDragging || !bDraggingBendPointMesh || !bIsRightMousePressed)
+	else if (!bIsDragging || !bIsRightMousePressed)
 	{
 		PlayerController->bShowMouseCursor = true;
-	}
-}
-
-void ASelectionBox::MeshBending(float DeltaTime)
-{
-	static FVector LastLocation;
-	static FVector CurrentLocation;
-	static FVector HitLocation;
-
-	if (bDraggingBendPointMesh)
-	{
-		FVector InitialLocation = InitialLocationOfBendPointMesh;
-		CurrentLocation = BendPointMesh->GetComponentLocation();
-		HitLocation = HitResult.Location;
-
-		if (FVector::DistSquared(HitLocation, LastLocation) > FMath::Square(1.0f))
-		{
-			FVector DesiredMovement = HitLocation - CurrentLocation;
-			FVector PlanePoint = CurrentLocation;
-			FVector PlaneNormal = FVector(0, 0, 1);
-			FVector ProjectedHitLocation = HitLocation - ((HitLocation - PlanePoint) | PlaneNormal) * PlaneNormal;
-			FVector ConstrainedMovement = FVector::DotProduct(DesiredMovement, MasterRightVector) * MasterRightVector;
-			ConstrainedMovement *= MouseSpeed;
-			FVector NewLocation = CurrentLocation + ConstrainedMovement;
-			FVector WallSplineDirection = WallSpline->GetForwardVector();
-			float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(WallSplineDirection.GetSafeNormal(), ConstrainedMovement.GetSafeNormal())));
-			
-			if (Angle <= 20.0f)
-			{
-				BendPointMesh->SetWorldLocation(NewLocation);
-				LastLocation = HitLocation;
-			}
-			else
-			{
-				UE_LOG(LogSelectionBox_MeshBending, Error, TEXT("Angle Exceeds 20 Degrees. Ignoring Movement"));
-			}
-		}
 	}
 }
 
