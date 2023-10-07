@@ -15,7 +15,6 @@ DEFINE_LOG_CATEGORY(LogSelectionBox_LeftClick);
 DEFINE_LOG_CATEGORY(LogSelectionBox_RightClick);
 DEFINE_LOG_CATEGORY(LogSelectionBox_DestroyMesh);
 DEFINE_LOG_CATEGORY(LogSelectionBox_WrapMouseAtScreenEdge);
-DEFINE_LOG_CATEGORY(LogSelectionBox_MeshBending);
 
 ASelectionBox::ASelectionBox()
 {
@@ -298,7 +297,7 @@ void ASelectionBox::DragLogic()
 			FVector ProjectedHitLocation = HitLocation - ((HitLocation - PlanePoint) | PlaneNormal) * PlaneNormal;
 			FVector DesiredMovement = HitLocation - CurrentLocation;
 			FVector ConstrainedMovement = FVector::DotProduct(DesiredMovement, WallSplineForwardVector) * WallSplineForwardVector;
-			ConstrainedMovement *= MouseSpeed;
+			ConstrainedMovement *= MouseSpeed;			);
 
 			if (bIsDraggingSplinePointMesh0)
 			{
