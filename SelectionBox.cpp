@@ -14,7 +14,6 @@ DEFINE_LOG_CATEGORY(LogSelectionBox_Tick);
 DEFINE_LOG_CATEGORY(LogSelectionBox_LeftClick);
 DEFINE_LOG_CATEGORY(LogSelectionBox_RightClick);
 DEFINE_LOG_CATEGORY(LogSelectionBox_DestroyMesh);
-DEFINE_LOG_CATEGORY(LogSelectionBox_WrapMouseAtScreenEdge);
 
 ASelectionBox::ASelectionBox()
 {
