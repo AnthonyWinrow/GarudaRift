@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -20,6 +18,9 @@ public:
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Time Control")
+	float TimeScale;
 
 	// Sun position parameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sun Position")
@@ -62,7 +63,19 @@ public:
 	// Lighting Updates
 	void UpdateSunPosition();
 
+	float AngleIncrement;
+
+	// Editor Updates
+	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent);
+
+	// Pointers
+	class USunPosition* SunPosition;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+private:
+	// Calendar Year
+	int32 DaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 };
