@@ -37,6 +37,7 @@ void ADayCycle::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	UpdateSeason();
 }
 
 // Called every frame
@@ -81,6 +82,27 @@ void ADayCycle::Tick(float DeltaTime)
 		Hours = 0;
 	}
 
+	CurrentTime = FDateTime::Now();
+
+	UpdateSeason();
+	if (CurrentSeason == Spring)
+	{
+		UpdateSpring();
+	}
+	else if (CurrentSeason == Summer)
+	{
+		UpdateSummer();
+	}
+	else if (CurrentSeason == Autumn)
+	{
+		UpdateAutumn();
+	}
+	else if (CurrentSeason == Winter)
+	{
+		UpdateWinter();
+	}
+
+	UpdateDayPhase();
 	UpdateSunPosition();
 }
 
@@ -91,6 +113,146 @@ void ADayCycle::UpdateSunPosition()
 	USunPositionFunctionLibrary::GetSunPosition(Latitude, Longitude, Timezone, bDaylightSavings, Year, Month, Day, Hours, Minutes, Seconds, SunData);
 
 	Sunlight->SetWorldRotation(FRotator(SunData.Elevation, SunData.Azimuth, 0));
+}
+
+void ADayCycle::UpdateSeason()
+{
+	if (Month >= 3 && Month <= 5)
+	{
+		CurrentSeason = Spring;
+	}
+	else if (Month >= 6 && Month <= 8)
+	{
+		CurrentSeason = Summer;
+	}
+	else if (Month >= 9 && Month <= 10)
+	{
+		CurrentSeason = Autumn;
+	}
+	else if (Month >= 11 && Month <= 3)
+	{
+		CurrentSeason = Winter;
+	}
+}
+
+void ADayCycle::UpdateSpring()
+{
+	DawnTime = FDateTime(Year, Month, Day, 4, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 6, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 8, 0, 0);
+	LateMorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
+	EarlyAfternoonTime = FDateTime(Year, Month, Day, 14, 0, 0);
+	LateAfternoonTime = FDateTime(Year, Month, Day, 16, 0, 0);
+	SunsetTime = FDateTime(Year, Month, Day, 18, 0, 0);
+	TwilightTime = FDateTime(Year, Month, Day, 20, 0, 0);
+	EveningTime = FDateTime(Year, Month, Day, 22, 0, 0);
+	NightTime = FDateTime(Year, Month, Day, 0, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 2, 0, 0);
+	LateNightTime = FDateTime(Year, Month, Day, 3, 0, 0);
+}
+
+void ADayCycle::UpdateSummer()
+{
+	DawnTime = FDateTime(Year, Month, Day, 4, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 5, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 7, 0, 0);
+	LateMorningTime = FDateTime(Year, Month, Day, 9, 0, 0);
+	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
+	EarlyAfternoonTime = FDateTime(Year, Month, Day, 14, 0, 0);
+	LateAfternoonTime = FDateTime(Year, Month, Day, 16, 0, 0);
+	SunsetTime = FDateTime(Year, Month, Day, 20, 0, 0);
+	TwilightTime = FDateTime(Year, Month, Day, 21, 0, 0);
+	EveningTime = FDateTime(Year, Month, Day, 22, 0, 0);
+	NightTime = FDateTime(Year, Month, Day, 23, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 0, 0, 0);
+	LateNightTime = FDateTime(Year, Month, Day, 1, 0, 0);
+}
+
+void ADayCycle::UpdateAutumn()
+{
+	DawnTime = FDateTime(Year, Month, Day, 6, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 7, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 9, 0, 0);
+	LateMorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
+	EarlyAfternoonTime = FDateTime(Year, Month, Day, 14, 0, 0);
+	LateAfternoonTime = FDateTime(Year, Month, Day, 16, 0, 0);
+	SunsetTime = FDateTime(Year, Month, Day, 18, 0, 0);
+	TwilightTime = FDateTime(Year, Month, Day, 19, 0, 0);
+	EveningTime = FDateTime(Year, Month, Day, 20, 0, 0);
+	NightTime = FDateTime(Year, Month, Day, 22, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 0, 0, 0);
+	LateNightTime = FDateTime(Year, Month, Day, 2, 0, 0);
+}
+
+void ADayCycle::UpdateWinter()
+{
+	DawnTime = FDateTime(Year, Month, Day, 7, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 8, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 9, 0, 0);
+	LateMorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
+	EarlyAfternoonTime = FDateTime(Year, Month, Day, 13, 0, 0);
+	LateAfternoonTime = FDateTime(Year, Month, Day, 15, 0, 0);
+	SunsetTime = FDateTime(Year, Month, Day, 16, 0, 0);
+	TwilightTime = FDateTime(Year, Month, Day, 17, 0, 0);
+	EveningTime = FDateTime(Year, Month, Day, 18, 0, 0);
+	NightTime = FDateTime(Year, Month, Day, 20, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 22, 0, 0);
+	LateNightTime = FDateTime(Year, Month, Day, 0, 0, 0);
+}
+
+void ADayCycle::UpdateDayPhase()
+{
+	if (CurrentTime >= DawnTime && CurrentTime < SunriseTime)
+	{
+		CurrentDayPhase = "Dawn";
+	}
+	else if (CurrentTime >= SunriseTime && CurrentTime < MorningTime)
+	{
+		CurrentDayPhase = "Sunrise";
+	}
+	else if (CurrentTime >= MorningTime && CurrentTime < LateMorningTime)
+	{
+		CurrentDayPhase = "Morning";
+	}
+	else if (CurrentTime >= LateMorningTime && CurrentTime < NoonTime)
+	{
+		CurrentDayPhase = "Late Morning";
+	}
+	else if (CurrentTime >= NoonTime && CurrentTime < EarlyAfternoonTime)
+	{
+		CurrentDayPhase = "Noon";
+	}
+	else if (CurrentTime >= EarlyAfternoonTime && CurrentTime < LateAfternoonTime)
+	{
+		CurrentDayPhase = "Early Afternoon";
+	}
+	else if (CurrentTime >= LateAfternoonTime && CurrentTime < SunsetTime)
+	{
+		CurrentDayPhase = "Late Afternoon";
+	}
+	else if (CurrentTime >= SunsetTime && CurrentTime < TwilightTime)
+	{
+		CurrentDayPhase = "Sunset";
+	}
+	else if (CurrentTime >= TwilightTime && CurrentTime < EveningTime)
+	{
+		CurrentDayPhase = "Twilight";
+	}
+	else if (CurrentTime >= EveningTime && CurrentTime < NightTime)
+	{
+		CurrentDayPhase = "Evening";
+	}
+	else if (CurrentTime >= NightTime && CurrentTime < MidnightTime)
+	{
+		CurrentDayPhase = "Midnight";
+	}
+	else
+	{
+		CurrentDayPhase = "Late Night";
+	}
 }
 
 void ADayCycle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
