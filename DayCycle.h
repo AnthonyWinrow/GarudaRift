@@ -71,6 +71,49 @@ public:
 	// Pointers
 	class USunPosition* SunPosition;
 
+	// Day Phases
+	FString Dawn = "Dawn";
+	FString Sunrise = "Sunrise";
+	FString Morning = "Morning";
+	FString LateMorning = "Late Morning";
+	FString Noon = "Noon";
+	FString EarlyAfternoon = "Early Afternoon";
+	FString LateAfternoon = "Late Afternoon";
+	FString Sunset = "Sunset";
+	FString Twilight = "Twilight";
+	FString Evening = "Evening";
+	FString Night = "Night";
+	FString Midnight = "Midnight";
+	FString LateNight = "Late Night";
+	FString CurrentDayPhase;
+
+	FDateTime DawnTime;
+	FDateTime SunriseTime;
+	FDateTime MorningTime;
+	FDateTime LateMorningTime;
+	FDateTime NoonTime;
+	FDateTime EarlyAfternoonTime;
+	FDateTime LateAfternoonTime;
+	FDateTime SunsetTime;
+	FDateTime TwilightTime;
+	FDateTime EveningTime;
+	FDateTime NightTime;
+	FDateTime MidnightTime;
+	FDateTime LateNightTime;
+	FDateTime CurrentTime;
+
+	void UpdateDayPhase();
+
+	// Seasons
+	enum ESeason { Spring, Summer, Autumn, Winter };
+	ESeason CurrentSeason;
+
+	void UpdateSeason();
+	void UpdateSpring();
+	void UpdateSummer();
+	void UpdateAutumn();
+	void UpdateWinter();
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
