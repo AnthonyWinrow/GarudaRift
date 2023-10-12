@@ -28,6 +28,32 @@ ADayCycle::ADayCycle()
 	Minutes = 0;
 	Seconds = 0;
 	AngleIncrement = 0.1f;
+	DawnTime = FDateTime(2023, 10, 9, 6, 0, 0);
+	SunriseTime = FDateTime(2023, 10, 9, 7, 0, 0);
+	MorningTime = FDateTime(2023, 10, 9, 8, 0, 0);
+	LateMorningTime = FDateTime(2023, 10, 9, 10, 0, 0);
+	NoonTime = FDateTime(2023, 10, 9, 12, 0, 0);
+	EarlyAfternoonTime = FDateTime(2023, 10, 9, 14, 0, 0);
+	LateAfternoonTime = FDateTime(2023, 10, 9, 16, 0, 0);
+	SunsetTime = FDateTime(2023, 10, 9, 18, 0, 0);
+	TwilightTime = FDateTime(2023, 10, 9, 19, 0, 0);
+	EveningTime = FDateTime(2023, 10, 9, 20, 0, 0);
+	NightTime = FDateTime(2023, 10, 9, 21, 0, 0);
+	MidnightTime = FDateTime(2023, 10, 9, 0, 0, 0);
+
+	Dawn = "Dawn";
+	Sunrise = "Sunrise";
+	Morning = "Morning";
+	LateMorning = "Late Morning";
+	Noon = "Noon";
+	EarlyAfternoon = "Early Afternoon";
+	LateAfternoon = "Late Afternoon";
+	Sunset = "Sunset";
+	Twilight = "Twilight";
+	Evening = "Evening";
+	Night = "Night";
+	Midnight = "Midnight";
+	LateNight = "Late Night";
 
 	UE_LOG(LogTemp, Error, TEXT("Constructor Called_daycycle"));
 }
@@ -84,6 +110,8 @@ void ADayCycle::Tick(float DeltaTime)
 
 	CurrentTime = FDateTime::Now();
 
+	UE_LOG(LogDayCycle, Error, TEXT("CurrentTime =: %s"), *CurrentTime.ToString());
+
 	UpdateSeason();
 	if (CurrentSeason == Spring)
 	{
@@ -103,7 +131,30 @@ void ADayCycle::Tick(float DeltaTime)
 	}
 
 	UpdateDayPhase();
+	SunlightIntensity();
 	UpdateSunPosition();
+
+	UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase =: %s"), *CurrentDayPhase);
+}
+
+void ADayCycle::SunlightIntensity()
+{
+	if (CurrentDayPhase == "Dawn" || CurrentDayPhase == "Twilight")
+	{
+		Sunlight->Intensity = 10.0f;
+	}
+	else if (CurrentDayPhase == "Sunrise" || CurrentDayPhase == "Sunset")
+	{
+		Sunlight->Intensity = 400.0f;
+	}
+	else if (CurrentDayPhase == "Noon")
+	{
+		Sunlight->Intensity = 120000.0f;
+	}
+	else
+	{
+		Sunlight->Intensity = 20000.0f;
+	}
 }
 
 void ADayCycle::UpdateSunPosition()
@@ -205,54 +256,82 @@ void ADayCycle::UpdateWinter()
 
 void ADayCycle::UpdateDayPhase()
 {
-	if (CurrentTime >= DawnTime && CurrentTime < SunriseTime)
+	UE_LOG(LogDayCycle, Error, TEXT("UpdateDayPhase Called"));
+	UE_LOG(LogDayCycle, Error, TEXT("CurrentTime =: %s"), *CurrentTime.ToString());
+
+	int32 CurrentHour = CurrentTime.GetHour();
+	int32 CurrentMinute = CurrentTime.GetMinute();
+
+	UE_LOG(LogDayCycle, Error, TEXT("CurrentHour =: %d, CurrentMinute =: %ds:"), CurrentHour, CurrentMinute);
+
+	int32 CurrentSecond = CurrentTime.GetSecond();
+
+	if (CurrentHour >= DawnTime.GetHour() && CurrentHour < SunriseTime.GetHour())
 	{
-		CurrentDayPhase = "Dawn";
+		CurrentDayPhase = Dawn;
+		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to Dawn"));
 	}
-	else if (CurrentTime >= SunriseTime && CurrentTime < MorningTime)
+	else if (CurrentHour >= SunriseTime.GetHour() && CurrentHour < MorningTime.GetHour())
 	{
-		CurrentDayPhase = "Sunrise";
+		CurrentDayPhase = Sunrise;
+		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to Sunrise"));
 	}
-	else if (CurrentTime >= MorningTime && CurrentTime < LateMorningTime)
+	else if (CurrentHour >= MorningTime.GetHour() && CurrentHour < LateMorningTime.GetHour())
 	{
-		CurrentDayPhase = "Morning";
+		CurrentDayPhase = Morning;
 	}
-	else if (CurrentTime >= LateMorningTime && CurrentTime < NoonTime)
+	else if (CurrentHour >= LateMorningTime.GetHour() && CurrentHour < NoonTime.GetHour())
 	{
-		CurrentDayPhase = "Late Morning";
+		CurrentDayPhase = LateMorning;
 	}
-	else if (CurrentTime >= NoonTime && CurrentTime < EarlyAfternoonTime)
+	else if (CurrentHour >= NoonTime.GetHour() && CurrentHour < EarlyAfternoonTime.GetHour())
 	{
-		CurrentDayPhase = "Noon";
+		CurrentDayPhase = Noon;
 	}
-	else if (CurrentTime >= EarlyAfternoonTime && CurrentTime < LateAfternoonTime)
+	else if (CurrentHour >= EarlyAfternoonTime.GetHour() && CurrentHour < LateAfternoonTime.GetHour())
 	{
-		CurrentDayPhase = "Early Afternoon";
+		CurrentDayPhase = EarlyAfternoon;
 	}
-	else if (CurrentTime >= LateAfternoonTime && CurrentTime < SunsetTime)
+	else if (CurrentHour >= LateAfternoonTime.GetHour() && CurrentHour < SunsetTime.GetHour())
 	{
-		CurrentDayPhase = "Late Afternoon";
+		CurrentDayPhase = LateAfternoon;
 	}
-	else if (CurrentTime >= SunsetTime && CurrentTime < TwilightTime)
+	else if (CurrentHour >= SunsetTime.GetHour() && CurrentHour < TwilightTime.GetHour())
 	{
-		CurrentDayPhase = "Sunset";
+		CurrentDayPhase = Sunset;
 	}
-	else if (CurrentTime >= TwilightTime && CurrentTime < EveningTime)
+	else if (CurrentHour >= TwilightTime.GetHour() && CurrentHour < EveningTime.GetHour())
 	{
-		CurrentDayPhase = "Twilight";
+		CurrentDayPhase = Twilight;
 	}
-	else if (CurrentTime >= EveningTime && CurrentTime < NightTime)
+	else if (CurrentHour >= EveningTime.GetHour() && CurrentHour < MidnightTime.GetHour())
 	{
-		CurrentDayPhase = "Evening";
+		CurrentDayPhase = Evening;
+		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to Evening"));
 	}
-	else if (CurrentTime >= NightTime && CurrentTime < MidnightTime)
+	else if (CurrentHour >= MidnightTime.GetHour() && CurrentHour < LateNightTime.GetHour())
 	{
-		CurrentDayPhase = "Midnight";
+		CurrentDayPhase = Midnight;
 	}
 	else
 	{
-		CurrentDayPhase = "Late Night";
+		CurrentDayPhase = LateNight;
+		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to LateNight"));
 	}
+
+	UE_LOG(LogDayCycle, Error, TEXT("DawnTime =: %s, Hour =: %d, Minute =: %d"), *DawnTime.ToString(), DawnTime.GetHour(), DawnTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("SunriseTime =: %s, Hour =: %d, Minute =: %d"), *SunriseTime.ToString(), SunriseTime.GetHour(), SunriseTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("MorningTime =: %s, Hour =: %d, Minute =: %d"), *MorningTime.ToString(), MorningTime.GetHour(), MorningTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("LateMorningTime =: %s, Hour =: %d, Minute =: %d"), *LateMorningTime.ToString(), LateMorningTime.GetHour(), LateMorningTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("NoonTime =: %s, Hour =: %d, Minute =: %d"), *NoonTime.ToString(), NoonTime.GetHour(), NoonTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("EarlyAfternoon =: %s, Hour =: %d, Minute =: %d"), *EarlyAfternoonTime.ToString(), EarlyAfternoonTime.GetHour(), EarlyAfternoonTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("LateAfternoon =: %s, Hour =: %d, Minute =: %d"), *LateAfternoonTime.ToString(), LateAfternoonTime.GetHour(), LateAfternoonTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("SunsetTime =: %s, Hour =: %d, Minute =: %d"), *SunsetTime.ToString(), SunsetTime.GetHour(), SunsetTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("TwilightTime =: %s, Hour =: %d, Minute =: %d"), *TwilightTime.ToString(), TwilightTime.GetHour(), TwilightTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("EveningTime =: %s, Hour =: %d, Minute =: %d"), *EveningTime.ToString(), EveningTime.GetHour(), EveningTime.GetMinute());
+	UE_LOG(LogDayCycle, Error, TEXT("MidnightTime =: %s, Hour =: %d, Minute =: %d"), *MidnightTime.ToString(), MidnightTime.GetHour(), MidnightTime.GetMinute());
+
+	UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase =: %s"), *CurrentDayPhase);
 }
 
 void ADayCycle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
