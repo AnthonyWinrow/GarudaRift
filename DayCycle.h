@@ -61,6 +61,10 @@ public:
 	UDirectionalLightComponent* Sunlight;
 
 	// Lighting Updates
+
+	UFUNCTION()
+	void SunlightIntensity();
+
 	void UpdateSunPosition();
 
 	float AngleIncrement;
