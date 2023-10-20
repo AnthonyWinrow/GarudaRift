@@ -1,5 +1,9 @@
 #include "GarudaRift/ActorClasses/DayCycle.h"
+#include "GarudaRift/ActorClasses/PostProcessManagement.h"
+#include "GarudaRift/SeasonEnum.h"
 #include "SunPosition.h"
+#include "EngineUtils.h"
+#include "Components/SkyLightComponent.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDayCycle, Log, All);
 DEFINE_LOG_CATEGORY(LogDayCycle);
@@ -16,18 +20,27 @@ ADayCycle::ADayCycle()
 	Sunlight = CreateDefaultSubobject<UDirectionalLightComponent>(TEXT("Sunlight"));
 	Sunlight->SetupAttachment(Root);
 
+	Skylight = CreateDefaultSubobject<USkyLightComponent>(TEXT("Skylight"));
+	Skylight->SetupAttachment(Root);
+
 	TimeScale = 1.0f;
 	Latitude = 0.0f;
 	Longitude = 0.0f;
 	Timezone = 0.0f;
 	bDaylightSavings = false;
+	CurrentPhaseIndex = 0;
+	CurrentIntensityIndex = 0;
+	CurrentIntensityIndex = 0;
+	NextPhaseIndex = 1;
+	NextIntensityIndex = 1;
+	NormalizedTime = 0.0f;
+	bInterpolate = true;
 	Year = 2023;
 	Month = 10;
 	Day = 8;
-	Hours = 8;
+	Hours = 13;
 	Minutes = 0;
 	Seconds = 0;
-	AngleIncrement = 0.1f;
 	DawnTime = FDateTime(2023, 10, 9, 6, 0, 0);
 	SunriseTime = FDateTime(2023, 10, 9, 7, 0, 0);
 	MorningTime = FDateTime(2023, 10, 9, 8, 0, 0);
@@ -62,7 +75,49 @@ ADayCycle::ADayCycle()
 void ADayCycle::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (PhaseColors.Num() == 0)
+	{
+		// Color Array
+		PhaseColors = {
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFA040")), // Dawn
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFE8B4")), // Sunrise
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFDA5EFF")), // Morning
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFF5AA")), // Late Morning
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFFFFF")), // Noon
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFEBD4")), // Early Afternoon
+			FLinearColor::FromSRGBColor(FColor::FromHex("FEF9E7")), // Late Afternoon
+			FLinearColor::FromSRGBColor(FColor::FromHex("FF8C00")), // Sunset
+			FLinearColor::FromSRGBColor(FColor::FromHex("FF6B3F")), // Twilight
+			FLinearColor::FromSRGBColor(FColor::FromHex("FF8C42")), // Evening
+			FLinearColor::FromSRGBColor(FColor::FromHex("463D2C")), // Night
+		};
+	}
+
+	if (PhaseIntensities.Num() == 0)
+	{
+		PhaseIntensities = {
+			10.0f, 400.0f, 2000.0f, 4000.0f, 120000.0f,
+			6000.0f, 3000.0f, 400.0f, 20.0f, 15.0f,
+			10.0f, 5.0f, 10.0f
+		};
+
+		if (PhaseColors.Num() > 0)
+		{
+			CurrentPhaseIndex = 0;
+			NextPhaseIndex = (CurrentPhaseIndex + 1) % PhaseColors.Num();
+		}
+	}
+
+	if (PhaseIntensities.Num() > 0)
+	{
+		CurrentIntensityIndex = 0;
+		NextIntensityIndex = (CurrentIntensityIndex + 1) % PhaseIntensities.Num();
+	}
+
+	Sunlight->SetLightColor(FColor::Black);
+	Sunlight->Intensity = PhaseIntensities[CurrentIntensityIndex];
+
 	UpdateSeason();
 }
 
@@ -108,53 +163,128 @@ void ADayCycle::Tick(float DeltaTime)
 		Hours = 0;
 	}
 
-	CurrentTime = FDateTime::Now();
-
-	UE_LOG(LogDayCycle, Error, TEXT("CurrentTime =: %s"), *CurrentTime.ToString());
+	CurrentTime = FDateTime(Year, Month, Day, Hours, Minutes, static_cast<int32>(Seconds));
 
 	UpdateSeason();
-	if (CurrentSeason == Spring)
+	if (CurrentSeason == ESeason::Spring)
 	{
 		UpdateSpring();
 	}
-	else if (CurrentSeason == Summer)
+	else if (CurrentSeason == ESeason::Summer)
 	{
 		UpdateSummer();
 	}
-	else if (CurrentSeason == Autumn)
+	else if (CurrentSeason == ESeason::Autumn)
 	{
 		UpdateAutumn();
 	}
-	else if (CurrentSeason == Winter)
+	else if (CurrentSeason == ESeason::Winter)
 	{
 		UpdateWinter();
 	}
 
 	UpdateDayPhase();
-	SunlightIntensity();
+	SunlightIntensity(DeltaTime);
+	SunLightColor(DeltaTime);
 	UpdateSunPosition();
-
-	UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase =: %s"), *CurrentDayPhase);
 }
 
-void ADayCycle::SunlightIntensity()
+void ADayCycle::SunlightIntensity(float DeltaTime)
 {
-	if (CurrentDayPhase == "Dawn" || CurrentDayPhase == "Twilight")
+	static float NormalizedTimeIntensity = 0.0f;
+	static bool bInterpolateIntensity = true;
+	float TargetIntensity;
+	float LerpSpeed = 0.25f;
+
+	if (LastIntensityPhase != CurrentDayPhase)
 	{
-		Sunlight->Intensity = 10.0f;
+		LastIntensityPhase = CurrentDayPhase;
+		CurrentIntensityIndex = (CurrentIntensityIndex + 1) % PhaseIntensities.Num();
+		NextIntensityIndex = (CurrentIntensityIndex + 1) % PhaseIntensities.Num();
+		NormalizedTimeIntensity = 0.0f;
+		bInterpolateIntensity = true;
 	}
-	else if (CurrentDayPhase == "Sunrise" || CurrentDayPhase == "Sunset")
+
+	if (bInterpolateIntensity)
 	{
-		Sunlight->Intensity = 400.0f;
+		NormalizedTimeIntensity += DeltaTime * LerpSpeed;
 	}
-	else if (CurrentDayPhase == "Noon")
+
+	// Phase Check
+	if (NormalizedTimeIntensity >= 1.0f)
 	{
-		Sunlight->Intensity = 120000.0f;
+		NormalizedTimeIntensity = 0.0f;
+		bInterpolateIntensity = false;
+	}
+	
+	if (bInterpolateIntensity)
+	{
+		TargetIntensity = FMath::Lerp(PhaseIntensities[CurrentIntensityIndex], PhaseIntensities[NextIntensityIndex], NormalizedTimeIntensity);
+		Sunlight->Intensity = FMath::Lerp(Sunlight->Intensity, TargetIntensity, DeltaTime * LerpSpeed);
+	}
+
+	Sunlight->MarkRenderStateDirty();
+}
+
+void ADayCycle::SunLightColor(float DeltaTime)
+{
+	float LerpSpeed = 0.5f;
+	static bool bColorCycle = true;
+
+	if (!bColorCycle && (CurrentDayPhase == "Dawn" || CurrentDayPhase == "Morning"))
+	{
+		CurrentPhaseIndex = 10;
+		NextPhaseIndex = 0;
+		bColorCycle = true;
+	}
+
+	if (CurrentPhaseIndex == 0)
+	{
+		bColorCycle = true;
+	}
+
+	if (LastDayPhase != CurrentDayPhase && bColorCycle)
+	{
+		LastDayPhase = CurrentDayPhase;
+		CurrentPhaseIndex = (CurrentPhaseIndex + 1) % PhaseColors.Num();
+
+		if (CurrentPhaseIndex == PhaseColors.Num() - 1)
+		{
+			NextPhaseIndex = 0;
+			bColorCycle = false;
+		}
+		else
+		{
+			NextPhaseIndex = (CurrentPhaseIndex + 1) % PhaseColors.Num();
+		}
+
+		NormalizedTime = 0.0f;
+		bInterpolate = true;
+	}
+
+	if (bInterpolate)
+	{
+		NormalizedTime += DeltaTime * LerpSpeed;
+	}
+
+	// Phase Check
+	if (NormalizedTime > 1.0f)
+	{
+		NormalizedTime = 0.0f;
+		bInterpolate = false;
 	}
 	else
 	{
-		Sunlight->Intensity = 20000.0f;
+		bInterpolate = true;
 	}
+
+	FLinearColor TargetColor = FLinearColor::LerpUsingHSV(PhaseColors[CurrentPhaseIndex], PhaseColors[NextPhaseIndex], NormalizedTime);
+	FLinearColor CurrentLinearColor = FLinearColor(Sunlight->LightColor);
+	FLinearColor InterpolatedColor = FLinearColor::LerpUsingHSV(CurrentLinearColor, TargetColor, DeltaTime * LerpSpeed);
+
+	FColor NewColor = InterpolatedColor.ToFColor(true);
+	Sunlight->LightColor = NewColor;
+	Sunlight->MarkRenderStateDirty();
 }
 
 void ADayCycle::UpdateSunPosition()
@@ -170,44 +300,44 @@ void ADayCycle::UpdateSeason()
 {
 	if (Month >= 3 && Month <= 5)
 	{
-		CurrentSeason = Spring;
+		CurrentSeason = ESeason::Spring;
 	}
 	else if (Month >= 6 && Month <= 8)
 	{
-		CurrentSeason = Summer;
+		CurrentSeason = ESeason::Summer;
 	}
 	else if (Month >= 9 && Month <= 10)
 	{
-		CurrentSeason = Autumn;
+		CurrentSeason = ESeason::Autumn;
 	}
 	else if (Month >= 11 && Month <= 3)
 	{
-		CurrentSeason = Winter;
+		CurrentSeason = ESeason::Winter;
 	}
 }
 
 void ADayCycle::UpdateSpring()
 {
-	DawnTime = FDateTime(Year, Month, Day, 4, 0, 0);
-	SunriseTime = FDateTime(Year, Month, Day, 6, 0, 0);
-	MorningTime = FDateTime(Year, Month, Day, 8, 0, 0);
-	LateMorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	DawnTime = FDateTime(Year, Month, Day, 8, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 9, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	LateMorningTime = FDateTime(Year, Month, Day, 11, 0, 0);
 	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
 	EarlyAfternoonTime = FDateTime(Year, Month, Day, 14, 0, 0);
 	LateAfternoonTime = FDateTime(Year, Month, Day, 16, 0, 0);
 	SunsetTime = FDateTime(Year, Month, Day, 18, 0, 0);
 	TwilightTime = FDateTime(Year, Month, Day, 20, 0, 0);
 	EveningTime = FDateTime(Year, Month, Day, 22, 0, 0);
-	NightTime = FDateTime(Year, Month, Day, 0, 0, 0);
-	MidnightTime = FDateTime(Year, Month, Day, 2, 0, 0);
+	NightTime = FDateTime(Year, Month, Day, 23, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 1, 0, 0);
 	LateNightTime = FDateTime(Year, Month, Day, 3, 0, 0);
 }
 
 void ADayCycle::UpdateSummer()
 {
-	DawnTime = FDateTime(Year, Month, Day, 4, 0, 0);
-	SunriseTime = FDateTime(Year, Month, Day, 5, 0, 0);
-	MorningTime = FDateTime(Year, Month, Day, 7, 0, 0);
+	DawnTime = FDateTime(Year, Month, Day, 6, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 7, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 8, 0, 0);
 	LateMorningTime = FDateTime(Year, Month, Day, 9, 0, 0);
 	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
 	EarlyAfternoonTime = FDateTime(Year, Month, Day, 14, 0, 0);
@@ -216,16 +346,16 @@ void ADayCycle::UpdateSummer()
 	TwilightTime = FDateTime(Year, Month, Day, 21, 0, 0);
 	EveningTime = FDateTime(Year, Month, Day, 22, 0, 0);
 	NightTime = FDateTime(Year, Month, Day, 23, 0, 0);
-	MidnightTime = FDateTime(Year, Month, Day, 0, 0, 0);
-	LateNightTime = FDateTime(Year, Month, Day, 1, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 1, 0, 0);
+	LateNightTime = FDateTime(Year, Month, Day, 2, 0, 0);
 }
 
 void ADayCycle::UpdateAutumn()
 {
-	DawnTime = FDateTime(Year, Month, Day, 6, 0, 0);
-	SunriseTime = FDateTime(Year, Month, Day, 7, 0, 0);
-	MorningTime = FDateTime(Year, Month, Day, 9, 0, 0);
-	LateMorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	DawnTime = FDateTime(Year, Month, Day, 7, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 9, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	LateMorningTime = FDateTime(Year, Month, Day, 11, 0, 0);
 	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
 	EarlyAfternoonTime = FDateTime(Year, Month, Day, 14, 0, 0);
 	LateAfternoonTime = FDateTime(Year, Month, Day, 16, 0, 0);
@@ -233,105 +363,116 @@ void ADayCycle::UpdateAutumn()
 	TwilightTime = FDateTime(Year, Month, Day, 19, 0, 0);
 	EveningTime = FDateTime(Year, Month, Day, 20, 0, 0);
 	NightTime = FDateTime(Year, Month, Day, 22, 0, 0);
-	MidnightTime = FDateTime(Year, Month, Day, 0, 0, 0);
-	LateNightTime = FDateTime(Year, Month, Day, 2, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 23, 0, 0);
+	LateNightTime = FDateTime(Year, Month, Day, 1, 0, 0);
 }
 
 void ADayCycle::UpdateWinter()
 {
-	DawnTime = FDateTime(Year, Month, Day, 7, 0, 0);
-	SunriseTime = FDateTime(Year, Month, Day, 8, 0, 0);
-	MorningTime = FDateTime(Year, Month, Day, 9, 0, 0);
-	LateMorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	DawnTime = FDateTime(Year, Month, Day, 8, 0, 0);
+	SunriseTime = FDateTime(Year, Month, Day, 9, 0, 0);
+	MorningTime = FDateTime(Year, Month, Day, 10, 0, 0);
+	LateMorningTime = FDateTime(Year, Month, Day, 11, 0, 0);
 	NoonTime = FDateTime(Year, Month, Day, 12, 0, 0);
 	EarlyAfternoonTime = FDateTime(Year, Month, Day, 13, 0, 0);
 	LateAfternoonTime = FDateTime(Year, Month, Day, 15, 0, 0);
 	SunsetTime = FDateTime(Year, Month, Day, 16, 0, 0);
 	TwilightTime = FDateTime(Year, Month, Day, 17, 0, 0);
 	EveningTime = FDateTime(Year, Month, Day, 18, 0, 0);
-	NightTime = FDateTime(Year, Month, Day, 20, 0, 0);
-	MidnightTime = FDateTime(Year, Month, Day, 22, 0, 0);
-	LateNightTime = FDateTime(Year, Month, Day, 0, 0, 0);
+	NightTime = FDateTime(Year, Month, Day, 19, 0, 0);
+	MidnightTime = FDateTime(Year, Month, Day, 21, 0, 0);
+	LateNightTime = FDateTime(Year, Month, Day, 23, 0, 0);
 }
 
 void ADayCycle::UpdateDayPhase()
 {
-	UE_LOG(LogDayCycle, Error, TEXT("UpdateDayPhase Called"));
-	UE_LOG(LogDayCycle, Error, TEXT("CurrentTime =: %s"), *CurrentTime.ToString());
-
 	int32 CurrentHour = CurrentTime.GetHour();
 	int32 CurrentMinute = CurrentTime.GetMinute();
-
-	UE_LOG(LogDayCycle, Error, TEXT("CurrentHour =: %d, CurrentMinute =: %ds:"), CurrentHour, CurrentMinute);
 
 	int32 CurrentSecond = CurrentTime.GetSecond();
 
 	if (CurrentHour >= DawnTime.GetHour() && CurrentHour < SunriseTime.GetHour())
 	{
 		CurrentDayPhase = Dawn;
-		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to Dawn"));
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= SunriseTime.GetHour() && CurrentHour < MorningTime.GetHour())
 	{
 		CurrentDayPhase = Sunrise;
-		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to Sunrise"));
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= MorningTime.GetHour() && CurrentHour < LateMorningTime.GetHour())
 	{
 		CurrentDayPhase = Morning;
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= LateMorningTime.GetHour() && CurrentHour < NoonTime.GetHour())
 	{
 		CurrentDayPhase = LateMorning;
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= NoonTime.GetHour() && CurrentHour < EarlyAfternoonTime.GetHour())
 	{
 		CurrentDayPhase = Noon;
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= EarlyAfternoonTime.GetHour() && CurrentHour < LateAfternoonTime.GetHour())
 	{
 		CurrentDayPhase = EarlyAfternoon;
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= LateAfternoonTime.GetHour() && CurrentHour < SunsetTime.GetHour())
 	{
 		CurrentDayPhase = LateAfternoon;
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= SunsetTime.GetHour() && CurrentHour < TwilightTime.GetHour())
 	{
 		CurrentDayPhase = Sunset;
+		UpdatePostProcessManagement();
 	}
 	else if (CurrentHour >= TwilightTime.GetHour() && CurrentHour < EveningTime.GetHour())
 	{
 		CurrentDayPhase = Twilight;
+		UpdatePostProcessManagement();
 	}
-	else if (CurrentHour >= EveningTime.GetHour() && CurrentHour < MidnightTime.GetHour())
+	else if (CurrentHour >= EveningTime.GetHour() && CurrentHour < NightTime.GetHour())
 	{
 		CurrentDayPhase = Evening;
-		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to Evening"));
+		UpdatePostProcessManagement();
 	}
-	else if (CurrentHour >= MidnightTime.GetHour() && CurrentHour < LateNightTime.GetHour())
+	else if (CurrentHour >= NightTime.GetHour() && CurrentHour < MidnightTime.GetHour())
+	{
+		CurrentDayPhase = Night;
+		UpdatePostProcessManagement();
+	}
+	else if (CurrentHour >= MidnightTime.GetHour() || (CurrentHour >= 0 && CurrentHour < LateNightTime.GetHour()))
 	{
 		CurrentDayPhase = Midnight;
+		UpdatePostProcessManagement();
 	}
 	else
 	{
 		CurrentDayPhase = LateNight;
-		UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase Set to LateNight"));
+		UpdatePostProcessManagement();
 	}
+}
 
-	UE_LOG(LogDayCycle, Error, TEXT("DawnTime =: %s, Hour =: %d, Minute =: %d"), *DawnTime.ToString(), DawnTime.GetHour(), DawnTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("SunriseTime =: %s, Hour =: %d, Minute =: %d"), *SunriseTime.ToString(), SunriseTime.GetHour(), SunriseTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("MorningTime =: %s, Hour =: %d, Minute =: %d"), *MorningTime.ToString(), MorningTime.GetHour(), MorningTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("LateMorningTime =: %s, Hour =: %d, Minute =: %d"), *LateMorningTime.ToString(), LateMorningTime.GetHour(), LateMorningTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("NoonTime =: %s, Hour =: %d, Minute =: %d"), *NoonTime.ToString(), NoonTime.GetHour(), NoonTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("EarlyAfternoon =: %s, Hour =: %d, Minute =: %d"), *EarlyAfternoonTime.ToString(), EarlyAfternoonTime.GetHour(), EarlyAfternoonTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("LateAfternoon =: %s, Hour =: %d, Minute =: %d"), *LateAfternoonTime.ToString(), LateAfternoonTime.GetHour(), LateAfternoonTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("SunsetTime =: %s, Hour =: %d, Minute =: %d"), *SunsetTime.ToString(), SunsetTime.GetHour(), SunsetTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("TwilightTime =: %s, Hour =: %d, Minute =: %d"), *TwilightTime.ToString(), TwilightTime.GetHour(), TwilightTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("EveningTime =: %s, Hour =: %d, Minute =: %d"), *EveningTime.ToString(), EveningTime.GetHour(), EveningTime.GetMinute());
-	UE_LOG(LogDayCycle, Error, TEXT("MidnightTime =: %s, Hour =: %d, Minute =: %d"), *MidnightTime.ToString(), MidnightTime.GetHour(), MidnightTime.GetMinute());
-
-	UE_LOG(LogDayCycle, Error, TEXT("CurrentDayPhase =: %s"), *CurrentDayPhase);
+void ADayCycle::UpdatePostProcessManagement()
+{
+	for (TActorIterator<APostProcessManagement> ActorItr(GetWorld()); ActorItr; ++ActorItr)
+	{
+		APostProcessManagement* PostProcessManager = *ActorItr;
+		if (PostProcessManager)
+		{
+			PostProcessManager->UpdatePostProcess(CurrentDayPhase);
+			break;
+		}
+		else
+		{
+			UE_LOG(LogDayCycle, Error, TEXT("PostProcessManager is NULL"));
+		}
+	}
 }
 
 void ADayCycle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
