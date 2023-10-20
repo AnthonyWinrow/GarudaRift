@@ -5,7 +5,10 @@
 #include "SunPosition.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SceneComponent.h"
+#include "GarudaRift/SeasonEnum.h"
 #include "DayCycle.generated.h"
+
+class APostProcessManagement;
 
 UCLASS()
 class GARUDARIFT_API ADayCycle : public AActor
@@ -53,6 +56,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sun Position")
 	int32 Seconds;
 
+	// Calendar Year
+	int32 DaysInMonth[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
 	// Components
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (HideCategories = "Light, Rendering, LOD, TextureStreaming"))
 	USceneComponent* Root;
@@ -60,14 +66,33 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (EditCondition = "false"))
 	UDirectionalLightComponent* Sunlight;
 
+	UPROPERTY(VisibleAnywhere)
+	USkyLightComponent* Skylight;
+
+	// External Classes
+	APostProcessManagement* PostProcessManagement;
+
+	void UpdatePostProcessManagement();
+
 	// Lighting Updates
-
 	UFUNCTION()
-	void SunlightIntensity();
+	void SunlightIntensity(float DeltaTime);
 
+	void SunLightColor(float DeltaTime);
 	void UpdateSunPosition();
 
-	float AngleIncrement;
+	float NormalizedTime;
+
+	bool bInterpolate;
+
+	int CurrentPhaseIndex;
+	int NextPhaseIndex;
+	int CurrentIntensityIndex;
+	int NextIntensityIndex;
+
+	TArray<FLinearColor> PhaseColors;
+	TArray<float> PhaseIntensities;
+	TArray<float> PhaseSkylightIntensities;
 
 	// Editor Updates
 	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent);
@@ -90,6 +115,8 @@ public:
 	FString Midnight = "Midnight";
 	FString LateNight = "Late Night";
 	FString CurrentDayPhase;
+	FString LastDayPhase;
+	FString LastIntensityPhase;
 
 	FDateTime DawnTime;
 	FDateTime SunriseTime;
@@ -107,22 +134,15 @@ public:
 	FDateTime CurrentTime;
 
 	void UpdateDayPhase();
-
-	// Seasons
-	enum ESeason { Spring, Summer, Autumn, Winter };
-	ESeason CurrentSeason;
-
 	void UpdateSeason();
 	void UpdateSpring();
 	void UpdateSummer();
 	void UpdateAutumn();
 	void UpdateWinter();
 
+	ESeason CurrentSeason;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-private:
-	// Calendar Year
-	int32 DaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 };
