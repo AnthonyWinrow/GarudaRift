@@ -30,11 +30,14 @@ ADayCycle::ADayCycle()
 	bDaylightSavings = false;
 	CurrentPhaseIndex = 0;
 	CurrentIntensityIndex = 0;
-	CurrentIntensityIndex = 0;
+	CurrentSkylightIntensityIndex = 0;
 	NextPhaseIndex = 1;
 	NextIntensityIndex = 1;
+	NextSkylightIntensityIndex = 1;
 	NormalizedTime = 0.0f;
+	NormalizedTimeIntensity = 0.0f;
 	bInterpolate = true;
+	bInterpolateIntensity = true;
 	Year = 2023;
 	Month = 10;
 	Day = 8;
@@ -94,6 +97,23 @@ void ADayCycle::BeginPlay()
 		};
 	}
 
+	if (BloomTints.Num() == 0)
+	{
+		BloomTints = {
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFA500FF"))
+		};
+	}
+
+	if (BloomScales.Num() == 0)
+	{
+		BloomScales = {
+			0.5f, 0.01f, 0.01f, 0.01f, 0.01f,
+			0.01f, 0.01f, 0.01f, 0.01f, 0.01f,
+		};
+	}
+
+	Sunlight->BloomScale = BloomScales[0];
+
 	if (PhaseIntensities.Num() == 0)
 	{
 		PhaseIntensities = {
@@ -117,6 +137,20 @@ void ADayCycle::BeginPlay()
 
 	Sunlight->SetLightColor(FColor::Black);
 	Sunlight->Intensity = PhaseIntensities[CurrentIntensityIndex];
+
+	if (SkylightPhaseIntensities.Num() == 0)
+	{
+		SkylightPhaseIntensities = {
+			0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f
+		};
+
+		CurrentSkylightIntensityIndex = 0;
+		NextSkylightIntensityIndex = (CurrentSkylightIntensityIndex + 1) % SkylightPhaseIntensities.Num();
+	}
+
+	Skylight->Intensity = SkylightPhaseIntensities[CurrentSkylightIntensityIndex];
 
 	UpdateSeason();
 }
@@ -186,13 +220,13 @@ void ADayCycle::Tick(float DeltaTime)
 	UpdateDayPhase();
 	SunlightIntensity(DeltaTime);
 	SunLightColor(DeltaTime);
+	SkylightIntensity(DeltaTime);
+	SunlightBloomScale(DeltaTime);
 	UpdateSunPosition();
 }
 
 void ADayCycle::SunlightIntensity(float DeltaTime)
 {
-	static float NormalizedTimeIntensity = 0.0f;
-	static bool bInterpolateIntensity = true;
 	float TargetIntensity;
 	float LerpSpeed = 0.25f;
 
@@ -230,13 +264,6 @@ void ADayCycle::SunLightColor(float DeltaTime)
 {
 	float LerpSpeed = 0.5f;
 	static bool bColorCycle = true;
-
-	if (!bColorCycle && (CurrentDayPhase == "Dawn" || CurrentDayPhase == "Morning"))
-	{
-		CurrentPhaseIndex = 10;
-		NextPhaseIndex = 0;
-		bColorCycle = true;
-	}
 
 	if (CurrentPhaseIndex == 0)
 	{
@@ -284,6 +311,123 @@ void ADayCycle::SunLightColor(float DeltaTime)
 
 	FColor NewColor = InterpolatedColor.ToFColor(true);
 	Sunlight->LightColor = NewColor;
+	Sunlight->MarkRenderStateDirty();
+}
+
+void ADayCycle::SkylightIntensity(float DeltaTime)
+{
+	float TargetIntensity;
+	float LerpSpeed = 0.25f;
+
+	if (LastSkylightIntensityPhase != CurrentDayPhase)
+	{
+		LastSkylightIntensityPhase = CurrentDayPhase;
+		CurrentSkylightIntensityIndex = (CurrentSkylightIntensityIndex + 1) % SkylightPhaseIntensities.Num();
+		NextSkylightIntensityIndex = (CurrentSkylightIntensityIndex + 1) % SkylightPhaseIntensities.Num();
+		NormalizedTimeIntensity = 0.0f;
+		bInterpolateIntensity = true;
+	}
+
+	if (bInterpolateIntensity)
+	{
+		NormalizedTimeIntensity += DeltaTime * LerpSpeed;
+	}
+
+	if (NormalizedTimeIntensity >= 1.0f)
+	{
+		NormalizedTimeIntensity = 0.0f;
+		bInterpolateIntensity = false;
+	}
+
+	if (bInterpolateIntensity)
+	{
+		TargetIntensity = FMath::Lerp(SkylightPhaseIntensities[CurrentSkylightIntensityIndex], SkylightPhaseIntensities[NextSkylightIntensityIndex], NormalizedTimeIntensity);
+		Skylight->Intensity = FMath::Lerp(Skylight->Intensity, TargetIntensity, DeltaTime * LerpSpeed);
+	}
+
+	Skylight->MarkRenderStateDirty();
+}
+
+void ADayCycle::SunlightBloomScale(float DeltaTime)
+{
+	float TargetBloomScale;
+	float LerpSpeed = 0.25f;
+
+	if (LastBloomPhase != CurrentDayPhase)
+	{
+		LastBloomPhase = CurrentDayPhase;
+		CurrentBloomScaleIndex = (CurrentBloomScaleIndex + 1) % BloomScales.Num();
+		NextBloomScaleIndex = (CurrentBloomScaleIndex + 1) % BloomScales.Num();
+		NormalizedTimeBloomScale = 0.0f;
+		bInterpolateBloomScale = true;
+	}
+
+	if (bInterpolateBloomScale)
+	{
+		NormalizedTimeBloomScale += DeltaTime * LerpSpeed;
+	}
+
+	if (NormalizedTimeBloomScale >= 1.0)
+	{
+		NormalizedTimeBloomScale = 0.0f;
+		bInterpolateBloomScale = false;
+	}
+
+	if (bInterpolateBloomScale)
+	{
+		TargetBloomScale = FMath::Lerp(BloomScales[CurrentBloomScaleIndex], BloomScales[NextBloomScaleIndex], NormalizedTimeBloomScale);
+		Sunlight->BloomScale = FMath::Lerp(Sunlight->BloomScale, TargetBloomScale, DeltaTime * LerpSpeed);
+	}
+
+	Sunlight->MarkRenderStateDirty();
+}
+
+void ADayCycle::SunlightBloomTint(float DeltaTime)
+{
+	float LerpSpeed = 0.5f;
+	static bool bColorCycle = true;
+
+	if (CurrentBloomTintIndex == 0)
+	{
+		bColorCycle = true;
+	}
+
+	if (LastBloomTintPhase != CurrentDayPhase && bColorCycle)
+	{
+		LastBloomTintPhase = CurrentDayPhase;
+		CurrentBloomTintIndex = (CurrentBloomTintIndex + 1) % BloomTints.Num();
+
+		if (CurrentBloomTintIndex == BloomTints.Num() - 1)
+		{
+			NextBloomTintIndex = 0;
+			bColorCycle = false;
+		}
+		else
+		{
+			NextBloomTintIndex = (CurrentBloomTintIndex + 1) % BloomTints.Num();
+		}
+
+		NormalizedTimeBloomTint = 0.0f;
+		bInterpolateBloomTint = true;
+	}
+
+	if (bInterpolateBloomTint)
+	{
+		NormalizedTimeBloomTint += DeltaTime * LerpSpeed;
+	}
+
+	if (NormalizedTimeBloomTint > 1.0f)
+	{
+		NormalizedTimeBloomTint = 0.0f;
+		bInterpolateBloomTint = false;
+	}
+
+	FLinearColor TargetBloomTint = FLinearColor::LerpUsingHSV(BloomTints[CurrentBloomTintIndex], BloomTints[NextBloomTintIndex], NormalizedTimeBloomTint);
+	FLinearColor CurrentBloomTint = Sunlight->BloomTint;
+	FLinearColor InterpolatedBloomTint = FLinearColor::LerpUsingHSV(CurrentBloomTint, TargetBloomTint, DeltaTime * LerpSpeed);
+
+	FColor NewBloomTint = InterpolatedBloomTint;
+	Sunlight->BloomTint = InterpolatedBloomTint;
 	Sunlight->MarkRenderStateDirty();
 }
 
