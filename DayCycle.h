@@ -75,24 +75,39 @@ public:
 	void UpdatePostProcessManagement();
 
 	// Lighting Updates
-	UFUNCTION()
 	void SunlightIntensity(float DeltaTime);
-
 	void SunLightColor(float DeltaTime);
+	void SkylightIntensity(float DeltaTime);
 	void UpdateSunPosition();
+	void SunlightBloomScale(float DeltaTime);
+	void SunlightBloomTint(float DeltaTime);
 
 	float NormalizedTime;
+	float NormalizedTimeIntensity;
+	float NormalizedTimeBloomScale;
+	float NormalizedTimeBloomTint;
 
 	bool bInterpolate;
+	bool bInterpolateIntensity;
+	bool bInterpolateBloomScale;
+	bool bInterpolateBloomTint;
 
 	int CurrentPhaseIndex;
 	int NextPhaseIndex;
 	int CurrentIntensityIndex;
 	int NextIntensityIndex;
+	int CurrentSkylightIntensityIndex;
+	int NextSkylightIntensityIndex;
+	int CurrentBloomScaleIndex;
+	int NextBloomScaleIndex;
+	int CurrentBloomTintIndex;
+	int NextBloomTintIndex;
 
 	TArray<FLinearColor> PhaseColors;
+	TArray<FLinearColor> BloomTints;
 	TArray<float> PhaseIntensities;
-	TArray<float> PhaseSkylightIntensities;
+	TArray<float> SkylightPhaseIntensities;
+	TArray<float> BloomScales;
 
 	// Editor Updates
 	void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent);
@@ -117,6 +132,9 @@ public:
 	FString CurrentDayPhase;
 	FString LastDayPhase;
 	FString LastIntensityPhase;
+	FString LastSkylightIntensityPhase;
+	FString LastBloomPhase;
+	FString LastBloomTintPhase;
 
 	FDateTime DawnTime;
 	FDateTime SunriseTime;
