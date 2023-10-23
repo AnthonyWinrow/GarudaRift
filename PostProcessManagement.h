@@ -24,12 +24,12 @@ public:
 	void UpdatePostProcess(const FString& CurrentDayPhase);
 
 	// Transition Management
-	void TransitionPostProcess(float DeltaTime);
+	void ShiftSceneLightingDynamics();
 
-	float TransitionSpeed;
+	APostProcessVolume* SceneLighting;
 
-	APostProcessVolume* DawnLighting;
-	APostProcessVolume* SunriseLighting;
+	// Arrays
+	TArray<UTextureCube*> DayPhaseTextures;
 
 protected:
 	// Called when the game starts or when spawned
@@ -39,6 +39,8 @@ private:
 	// Private Timekeeping
 	FString CurrentDayPhaseState;
 	FString LastDayPhaseState;
-
+	FTimerHandle LightingTimerHandle;
 	bool bNewPhaseStart;
+
+	UTexture2D* BokehShapeTexture;
 };
