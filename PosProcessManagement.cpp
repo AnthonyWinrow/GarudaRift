@@ -15,6 +15,9 @@ APostProcessManagement::APostProcessManagement()
 	PrimaryActorTick.bCanEverTick = true;
 
 	bNewPhaseStart = false;
+	TimerValue = 0.0f;
+	TotalTransitionTime = 10.0f;
+	LerpSpeed = 2.0f;
 	
 	static ConstructorHelpers::FObjectFinder<UTexture2D> TextureFinder(TEXT("Texture2D'/Engine/MobileResources/HUD/T_Castle_ThumbstickOutter.T_CastleThumbstickOutter'"));
 	if (TextureFinder.Succeeded())
@@ -183,9 +186,6 @@ void APostProcessManagement::ShiftSceneLightingDynamics()
 {
 	FPostProcessSettings& PostProcessSettings = SceneLighting->Settings;
 
-	float DeltaTime = 0.1f;
-	float Speed = 1.0f;
-
 	if (CurrentDayPhaseState == "Dawn")
 	{
 		if (DayPhaseTextures.Num() > 0 && DayPhaseTextures[0] != nullptr)
@@ -232,6 +232,8 @@ void APostProcessManagement::ShiftSceneLightingDynamics()
 				PostProcessSettings.AmbientCubemap = DayPhaseTextures[0];
 				PostProcessSettings.AmbientCubemapIntensity = 0.1f;
 				PostProcessSettings.AmbientCubemapTint = FLinearColor::FromSRGBColor(FColor::FromHex("B3D7FFFF"));
+
+				DawnSettings = PostProcessSettings;
 			}
 		}
 	}
@@ -277,9 +279,11 @@ void APostProcessManagement::ShiftSceneLightingDynamics()
 				PostProcessSettings.AmbientCubemap = DayPhaseTextures[1];
 				PostProcessSettings.AmbientCubemapIntensity = 0.4f;
 				PostProcessSettings.AmbientCubemapTint = FLinearColor::White;
+
+				SunriseSettings = PostProcessSettings;
 			}
 		}
 	}
-	
+
 	UE_LOG(LogPostProcessManagement, Log, TEXT("Ambient Cubemap Set to Dawn"));
 }
