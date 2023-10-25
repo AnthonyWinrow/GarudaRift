@@ -15,9 +15,6 @@ APostProcessManagement::APostProcessManagement()
 	PrimaryActorTick.bCanEverTick = true;
 
 	bNewPhaseStart = false;
-	TimerValue = 0.0f;
-	TotalTransitionTime = 10.0f;
-	LerpSpeed = 2.0f;
 	
 	static ConstructorHelpers::FObjectFinder<UTexture2D> TextureFinder(TEXT("Texture2D'/Engine/MobileResources/HUD/T_Castle_ThumbstickOutter.T_CastleThumbstickOutter'"));
 	if (TextureFinder.Succeeded())
@@ -58,8 +55,6 @@ void APostProcessManagement::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	GetWorld()->GetTimerManager().SetTimer(LightingTimerHandle, this, &APostProcessManagement::ShiftSceneLightingDynamics, 0.1f, true);
-
 	for (TActorIterator<APostProcessVolume> ActorItr(GetWorld()); ActorItr; ++ActorItr)
 	{
 		if (ActorItr->ActorHasTag(FName("SceneLighting")))
@@ -162,14 +157,7 @@ void APostProcessManagement::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Only update if the day phase has changed
-	if (CurrentDayPhaseState != LastDayPhaseState)
-	{
-		ShiftSceneLightingDynamics();
-		LastDayPhaseState = CurrentDayPhaseState;
-
-		UE_LOG(LogPostProcessManagement, Log, TEXT("Called ShiftSceneLightingDynamics"));
-	}
+	ShiftSceneLightingDynamics(DeltaTime);
 }
 
 void APostProcessManagement::UpdatePostProcess(const FString& CurrentDayPhase)
@@ -182,9 +170,12 @@ void APostProcessManagement::UpdatePostProcess(const FString& CurrentDayPhase)
 	}
 }
 
-void APostProcessManagement::ShiftSceneLightingDynamics()
+void APostProcessManagement::ShiftSceneLightingDynamics(float DeltaTime)
 {
 	FPostProcessSettings& PostProcessSettings = SceneLighting->Settings;
+
+	float Speed = 1.0f;
+	static float LerpAlpha = 0.0f;
 
 	if (CurrentDayPhaseState == "Dawn")
 	{
@@ -232,8 +223,6 @@ void APostProcessManagement::ShiftSceneLightingDynamics()
 				PostProcessSettings.AmbientCubemap = DayPhaseTextures[0];
 				PostProcessSettings.AmbientCubemapIntensity = 0.1f;
 				PostProcessSettings.AmbientCubemapTint = FLinearColor::FromSRGBColor(FColor::FromHex("B3D7FFFF"));
-
-				DawnSettings = PostProcessSettings;
 			}
 		}
 	}
@@ -279,8 +268,6 @@ void APostProcessManagement::ShiftSceneLightingDynamics()
 				PostProcessSettings.AmbientCubemap = DayPhaseTextures[1];
 				PostProcessSettings.AmbientCubemapIntensity = 0.4f;
 				PostProcessSettings.AmbientCubemapTint = FLinearColor::White;
-
-				SunriseSettings = PostProcessSettings;
 			}
 		}
 	}
