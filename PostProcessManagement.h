@@ -24,7 +24,7 @@ public:
 	void UpdatePostProcess(const FString& CurrentDayPhase);
 
 	// Transition Management
-	void ShiftSceneLightingDynamics();
+	void ShiftSceneLightingDynamics(float DeltaTime);
 
 	APostProcessVolume* SceneLighting;
 
@@ -40,7 +40,11 @@ private:
 	FString CurrentDayPhaseState;
 	FString LastDayPhaseState;
 	FTimerHandle LightingTimerHandle;
+	float TimerValue;
+	float TotalTransitionTime;
+	float LerpSpeed;
 	bool bNewPhaseStart;
+	bool bIsLerping = false;
 
 	UTexture2D* BokehShapeTexture;
 };
