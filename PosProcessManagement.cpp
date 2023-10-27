@@ -174,103 +174,110 @@ void APostProcessManagement::ShiftSceneLightingDynamics(float DeltaTime)
 {
 	FPostProcessSettings& PostProcessSettings = SceneLighting->Settings;
 
-	float Speed = 1.0f;
+	float Speed = 0.001f;
 	static float LerpAlpha = 0.0f;
+
+	// Update LerpAlpha based on DeltaTime and Speed
+	LerpAlpha += DeltaTime * Speed;
+	LerpAlpha = FMath::Clamp(LerpAlpha, 0.0f, 1.0f);
+
+	float DawnBloomIntensity = 0.832f;
+	float SunriseBloomIntensity = 2.339f;
 
 	if (CurrentDayPhaseState == "Dawn")
 	{
-		if (DayPhaseTextures.Num() > 0 && DayPhaseTextures[0] != nullptr)
+		LerpAlpha += DeltaTime * Speed;
+		LerpAlpha = FMath::Clamp(LerpAlpha, 0.0f, 1.0f);
+
+		if (SceneLighting)
 		{
-			if (SceneLighting)
-			{
-				PostProcessSettings.BloomMethod = BM_FFT;
-				PostProcessSettings.BloomIntensity = 0.832f;
-				PostProcessSettings.BloomThreshold = -1.0f;
-				PostProcessSettings.AutoExposureMinBrightness = -1.0f;
-				PostProcessSettings.AutoExposureMaxBrightness = 1.5f;
-				PostProcessSettings.LensFlareIntensity = 3.816f;
-				PostProcessSettings.LensFlareBokehSize = 6.656;
-				PostProcessSettings.LensFlareThreshold = 8.0f;
-				PostProcessSettings.TemperatureType = TEMP_ColorTemperature;
-				PostProcessSettings.WhiteTemp = 4740.0;
-				PostProcessSettings.ColorSaturation = FVector4(0.8f, 0.8f, 0.8f, 1.0f);
-				PostProcessSettings.ColorContrast = FVector4(1.06f, 1.06f, 1.06f, 1.0f);
-				PostProcessSettings.ColorGamma = FVector4(1.05f, 1.05f, 1.05f, 1.0f);
-				PostProcessSettings.ColorGain = FVector4(0.9f, 0.9f, 0.9f, 1.0f);
-				PostProcessSettings.ColorOffset = FVector4(-0.02f, -0.02f, -0.02f, 0.0f);
-				PostProcessSettings.ColorSaturationShadows = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
-				PostProcessSettings.ColorContrastShadows = FVector4(1.1f, 1.1f, 1.1f, 1.1f);
-				PostProcessSettings.ColorGammaShadows = FVector4(1.22f, 1.22f, 1.22f, 1.22f);
-				PostProcessSettings.ColorGainShadows = FVector4(1.02f, 1.02f, 1.02f, 1.0f);
-				PostProcessSettings.ColorOffsetShadows = FVector4(0.0f, 0.0f, 0.0f, 0.0f);
-				PostProcessSettings.ColorCorrectionShadowsMax = 0.09;
-				PostProcessSettings.ColorSaturationMidtones = FVector4(0.9f, 0.9f, 0.9f, 1.0f);
-				PostProcessSettings.ColorContrastMidtones = FVector4(0.92f, 0.92f, 0.92f, 1.0f);
-				PostProcessSettings.ColorGammaMidtones = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
-				PostProcessSettings.ColorGainMidtones = FVector4(0.88f, 0.88f, 0.88f, 1.0f);
-				PostProcessSettings.ColorOffsetMidtones = FVector4(0.0f, 0.0f, 0.0f, 0.0f);
-				PostProcessSettings.ColorSaturationHighlights = FVector4(1.08f, 1.08f, 1.08f, 1.0f);
-				PostProcessSettings.ColorContrastHighlights = FVector4(1.02f, 1.02f, 1.02f, 1.0f);
-				PostProcessSettings.ColorGammaHighlights = FVector4(0.96f, 0.96f, 0.96f, 1.0f);
-				PostProcessSettings.ColorGainHighlights = FVector4(1.08f, 1.08f, 1.08f, 1.0f);
-				PostProcessSettings.ColorGainHighlights = FVector4(-0.04f, -0.04f, -0.04f, 0.0f);
-				PostProcessSettings.ColorCorrectionHighlightsMax = -0.072;
-				PostProcessSettings.ColorCorrectionHighlightsMin = 1.432;
-				PostProcessSettings.FilmSlope = 0.92;
-				PostProcessSettings.FilmToe = 0.6;
-				PostProcessSettings.FilmShoulder = 0.28;
-				PostProcessSettings.FilmWhiteClip = 0.06;
-				PostProcessSettings.AmbientCubemap = DayPhaseTextures[0];
-				PostProcessSettings.AmbientCubemapIntensity = 0.1f;
-				PostProcessSettings.AmbientCubemapTint = FLinearColor::FromSRGBColor(FColor::FromHex("B3D7FFFF"));
-			}
+			PostProcessSettings.BloomMethod = BM_FFT;
+			PostProcessSettings.BloomThreshold = -1.0f;
+			PostProcessSettings.AutoExposureMinBrightness = -1.0f;
+			PostProcessSettings.AutoExposureMaxBrightness = 1.5f;
+			PostProcessSettings.LensFlareIntensity = 3.816f;
+			PostProcessSettings.LensFlareBokehSize = 6.656;
+			PostProcessSettings.LensFlareThreshold = 8.0f;
+			PostProcessSettings.TemperatureType = TEMP_ColorTemperature;
+			PostProcessSettings.WhiteTemp = 4740.0;
+			PostProcessSettings.ColorSaturation = FVector4(0.8f, 0.8f, 0.8f, 1.0f);
+			PostProcessSettings.ColorContrast = FVector4(1.06f, 1.06f, 1.06f, 1.0f);
+			PostProcessSettings.ColorGamma = FVector4(1.05f, 1.05f, 1.05f, 1.0f);
+			PostProcessSettings.ColorGain = FVector4(0.9f, 0.9f, 0.9f, 1.0f);
+			PostProcessSettings.ColorOffset = FVector4(-0.02f, -0.02f, -0.02f, 0.0f);
+			PostProcessSettings.ColorSaturationShadows = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+			PostProcessSettings.ColorContrastShadows = FVector4(1.1f, 1.1f, 1.1f, 1.1f);
+			PostProcessSettings.ColorGammaShadows = FVector4(1.22f, 1.22f, 1.22f, 1.22f);
+			PostProcessSettings.ColorGainShadows = FVector4(1.02f, 1.02f, 1.02f, 1.0f);
+			PostProcessSettings.ColorOffsetShadows = FVector4(0.0f, 0.0f, 0.0f, 0.0f);
+			PostProcessSettings.ColorCorrectionShadowsMax = 0.09;
+			PostProcessSettings.ColorSaturationMidtones = FVector4(0.9f, 0.9f, 0.9f, 1.0f);
+			PostProcessSettings.ColorContrastMidtones = FVector4(0.92f, 0.92f, 0.92f, 1.0f);
+			PostProcessSettings.ColorGammaMidtones = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+			PostProcessSettings.ColorGainMidtones = FVector4(0.88f, 0.88f, 0.88f, 1.0f);
+			PostProcessSettings.ColorOffsetMidtones = FVector4(0.0f, 0.0f, 0.0f, 0.0f);
+			PostProcessSettings.ColorSaturationHighlights = FVector4(1.08f, 1.08f, 1.08f, 1.0f);
+			PostProcessSettings.ColorContrastHighlights = FVector4(1.02f, 1.02f, 1.02f, 1.0f);
+			PostProcessSettings.ColorGammaHighlights = FVector4(0.96f, 0.96f, 0.96f, 1.0f);
+			PostProcessSettings.ColorGainHighlights = FVector4(1.08f, 1.08f, 1.08f, 1.0f);
+			PostProcessSettings.ColorGainHighlights = FVector4(-0.04f, -0.04f, -0.04f, 0.0f);
+			PostProcessSettings.ColorCorrectionHighlightsMax = -0.072;
+			PostProcessSettings.ColorCorrectionHighlightsMin = 1.432;
+			PostProcessSettings.FilmSlope = 0.92;
+			PostProcessSettings.FilmToe = 0.6;
+			PostProcessSettings.FilmShoulder = 0.28;
+			PostProcessSettings.FilmWhiteClip = 0.06;
+			PostProcessSettings.AmbientCubemap = DayPhaseTextures[0];
+			PostProcessSettings.AmbientCubemapIntensity = 0.1f;
+			PostProcessSettings.AmbientCubemapTint = FLinearColor::FromSRGBColor(FColor::FromHex("B3D7FFFF"));			
 		}
 	}
 	else if (CurrentDayPhaseState == "Sunrise")
 	{
-		if (DayPhaseTextures.Num() > 1 && DayPhaseTextures[1] != nullptr)
+		LerpAlpha = 0.0f;
+
+		if (SceneLighting)
 		{
-			if (SceneLighting)
-			{
-				PostProcessSettings.BloomMethod = BM_FFT;
-				PostProcessSettings.BloomIntensity = 2.339f;
-				PostProcessSettings.BloomThreshold = -1.0f;
-				PostProcessSettings.BloomConvolutionScatterDispersion = 2.24;
-				PostProcessSettings.AutoExposureBias = -0.899999;
-				PostProcessSettings.AutoExposureApplyPhysicalCameraExposure = 1.0;
-				PostProcessSettings.AutoExposureMinBrightness = 1.0f;
-				PostProcessSettings.AutoExposureMaxBrightness = 9.0f;
-				PostProcessSettings.AutoExposureSpeedUp = 3.0f;
-				PostProcessSettings.AutoExposureSpeedDown = 1.0f;
-				PostProcessSettings.TemperatureType = TEMP_ColorTemperature;
-				PostProcessSettings.WhiteTemp = 7796.0;
-				PostProcessSettings.ColorSaturation = FVector4(0.98f, 0.98f, 0.98f, 1.0f);
-				PostProcessSettings.ColorContrast = FVector4(1.2f, 1.2f, 1.2f, 1.0f);
-				PostProcessSettings.ColorGamma = FVector4(0.94f, 0.94f, 0.94f, 1.0f);
-				PostProcessSettings.ColorGain = FVector4(1.18f, 1.18f, 1.18f, 1.0f);
-				PostProcessSettings.ColorOffset = FVector4(0.01f, 0.01f, 0.01f, 0.0f);
-				PostProcessSettings.ColorSaturationShadows = FVector4(1.04f, 1.04f, 1.04f, 1.0f);
-				PostProcessSettings.ColorContrastShadows = FVector4(0.9f, 0.9f, 0.9f, 1.0f);
-				PostProcessSettings.ColorGammaShadows = FVector4(1.1f, 1.1f, 1.1f, 1.0f);
-				PostProcessSettings.ColorGainShadows = FVector4(1.14f, 1.14f, 1.14f, 1.0f);
-				PostProcessSettings.ColorOffsetShadows = FVector4(-0.04f, -0.04f, -0.04f, 0.0f);
-				PostProcessSettings.ColorCorrectionShadowsMax = 0.09;
-				PostProcessSettings.ColorSaturationMidtones = FVector4(1.08f, 1.08f, 1.08f, 1.0);
-				PostProcessSettings.ColorContrastMidtones = FVector4(1.06f, 1.06f, 1.06f, 1.0f);
-				PostProcessSettings.ColorGammaMidtones = FVector4(1.12f, 1.12f, 1.12f, 1.0f);
-				PostProcessSettings.ColorGainMidtones = FVector4(0.96f, 0.96f, 0.96f, 1.0f);
-				PostProcessSettings.ColorOffsetMidtones = FVector4(0.02f, 0.02f, 0.02f, 0.0f);
-				PostProcessSettings.ColorSaturationHighlights = FVector4(0.78f, 0.78f, 0.78f, 1.0f);
-				PostProcessSettings.ColorContrastHighlights = FVector4(1.14f, 1.14f, 1.14f, 1.0f);
-				PostProcessSettings.ColorGammaHighlights = FVector4(0.98f, 0.98f, 0.98f, 1.0f);
-				PostProcessSettings.ColorGainHighlights = FVector4(0.7f, 0.7f, 0.7f, 1.0f);
-				PostProcessSettings.ColorOffsetHighlights = FVector4(0.08f, 0.08f, 0.08f, 0.0f);
-				PostProcessSettings.AmbientCubemap = DayPhaseTextures[1];
-				PostProcessSettings.AmbientCubemapIntensity = 0.4f;
-				PostProcessSettings.AmbientCubemapTint = FLinearColor::White;
-			}
+			PostProcessSettings.BloomMethod = BM_FFT;
+			PostProcessSettings.BloomIntensity = 2.339f;
+			PostProcessSettings.BloomThreshold = -1.0f;
+			PostProcessSettings.BloomConvolutionScatterDispersion = 2.24;
+			PostProcessSettings.AutoExposureBias = -0.899999;
+			PostProcessSettings.AutoExposureApplyPhysicalCameraExposure = 1.0;
+			PostProcessSettings.AutoExposureMinBrightness = 1.0f;
+			PostProcessSettings.AutoExposureMaxBrightness = 9.0f;
+			PostProcessSettings.AutoExposureSpeedUp = 3.0f;
+			PostProcessSettings.AutoExposureSpeedDown = 1.0f;
+			PostProcessSettings.TemperatureType = TEMP_ColorTemperature;
+			PostProcessSettings.WhiteTemp = 7796.0;
+			PostProcessSettings.ColorSaturation = FVector4(0.98f, 0.98f, 0.98f, 1.0f);
+			PostProcessSettings.ColorContrast = FVector4(1.2f, 1.2f, 1.2f, 1.0f);
+			PostProcessSettings.ColorGamma = FVector4(0.94f, 0.94f, 0.94f, 1.0f);
+			PostProcessSettings.ColorGain = FVector4(1.18f, 1.18f, 1.18f, 1.0f);
+			PostProcessSettings.ColorOffset = FVector4(0.01f, 0.01f, 0.01f, 0.0f);
+			PostProcessSettings.ColorSaturationShadows = FVector4(1.04f, 1.04f, 1.04f, 1.0f);
+			PostProcessSettings.ColorContrastShadows = FVector4(0.9f, 0.9f, 0.9f, 1.0f);
+			PostProcessSettings.ColorGammaShadows = FVector4(1.1f, 1.1f, 1.1f, 1.0f);
+			PostProcessSettings.ColorGainShadows = FVector4(1.14f, 1.14f, 1.14f, 1.0f);
+			PostProcessSettings.ColorOffsetShadows = FVector4(-0.04f, -0.04f, -0.04f, 0.0f);
+			PostProcessSettings.ColorCorrectionShadowsMax = 0.09;
+			PostProcessSettings.ColorSaturationMidtones = FVector4(1.08f, 1.08f, 1.08f, 1.0);
+			PostProcessSettings.ColorContrastMidtones = FVector4(1.06f, 1.06f, 1.06f, 1.0f);
+			PostProcessSettings.ColorGammaMidtones = FVector4(1.12f, 1.12f, 1.12f, 1.0f);
+			PostProcessSettings.ColorGainMidtones = FVector4(0.96f, 0.96f, 0.96f, 1.0f);
+			PostProcessSettings.ColorOffsetMidtones = FVector4(0.02f, 0.02f, 0.02f, 0.0f);
+			PostProcessSettings.ColorSaturationHighlights = FVector4(0.78f, 0.78f, 0.78f, 1.0f);
+			PostProcessSettings.ColorContrastHighlights = FVector4(1.14f, 1.14f, 1.14f, 1.0f);
+			PostProcessSettings.ColorGammaHighlights = FVector4(0.98f, 0.98f, 0.98f, 1.0f);
+			PostProcessSettings.ColorGainHighlights = FVector4(0.7f, 0.7f, 0.7f, 1.0f);
+			PostProcessSettings.ColorOffsetHighlights = FVector4(0.08f, 0.08f, 0.08f, 0.0f);
+			PostProcessSettings.AmbientCubemap = DayPhaseTextures[1];
+			PostProcessSettings.AmbientCubemapIntensity = 0.4f;
+			PostProcessSettings.AmbientCubemapTint = FLinearColor::White;			
 		}
 	}
+
+	PostProcessSettings.BloomIntensity = FMath::Lerp(DawnBloomIntensity, SunriseBloomIntensity, LerpAlpha);
 
 	UE_LOG(LogPostProcessManagement, Log, TEXT("Ambient Cubemap Set to Dawn"));
 }
