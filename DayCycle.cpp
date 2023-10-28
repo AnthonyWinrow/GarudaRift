@@ -37,7 +37,7 @@ ADayCycle::ADayCycle()
 	NormalizedTime = 0.0f;
 	NormalizedTimeIntensity = 0.0f;
 	bInterpolate = true;
-	bInterpolateIntensity = true;
+	bInterpolateIntensity = false;
 	Year = 2023;
 	Month = 10;
 	Day = 8;
@@ -84,7 +84,7 @@ void ADayCycle::BeginPlay()
 		// Color Array
 		PhaseColors = {
 			FLinearColor::FromSRGBColor(FColor::FromHex("FFA040")), // Dawn
-			FLinearColor::FromSRGBColor(FColor::FromHex("FFE8B4")), // Sunrise
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFD166")), // Sunrise
 			FLinearColor::FromSRGBColor(FColor::FromHex("FFDA5EFF")), // Morning
 			FLinearColor::FromSRGBColor(FColor::FromHex("FFF5AA")), // Late Morning
 			FLinearColor::FromSRGBColor(FColor::FromHex("FFFFFF")), // Noon
@@ -100,19 +100,18 @@ void ADayCycle::BeginPlay()
 	if (BloomTints.Num() == 0)
 	{
 		BloomTints = {
-			FLinearColor::FromSRGBColor(FColor::FromHex("FFA500FF"))
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFA500FF")),
+			FLinearColor::FromSRGBColor(FColor::FromHex("FFD700"))
 		};
 	}
 
 	if (BloomScales.Num() == 0)
 	{
 		BloomScales = {
-			0.5f, 0.01f, 0.01f, 0.01f, 0.01f,
+			0.1f, 0.1f, 0.01f, 0.01f, 0.01f,
 			0.01f, 0.01f, 0.01f, 0.01f, 0.01f,
 		};
 	}
-
-	Sunlight->BloomScale = BloomScales[0];
 
 	if (PhaseIntensities.Num() == 0)
 	{
@@ -121,36 +120,16 @@ void ADayCycle::BeginPlay()
 			6000.0f, 3000.0f, 400.0f, 20.0f, 15.0f,
 			10.0f, 5.0f, 10.0f
 		};
-
-		if (PhaseColors.Num() > 0)
-		{
-			CurrentPhaseIndex = 0;
-			NextPhaseIndex = (CurrentPhaseIndex + 1) % PhaseColors.Num();
-		}
 	}
-
-	if (PhaseIntensities.Num() > 0)
-	{
-		CurrentIntensityIndex = 0;
-		NextIntensityIndex = (CurrentIntensityIndex + 1) % PhaseIntensities.Num();
-	}
-
-	Sunlight->SetLightColor(FColor::Black);
-	Sunlight->Intensity = PhaseIntensities[CurrentIntensityIndex];
 
 	if (SkylightPhaseIntensities.Num() == 0)
 	{
 		SkylightPhaseIntensities = {
-			0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 0.0f
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f
 		};
-
-		CurrentSkylightIntensityIndex = 0;
-		NextSkylightIntensityIndex = (CurrentSkylightIntensityIndex + 1) % SkylightPhaseIntensities.Num();
 	}
-
-	Skylight->Intensity = SkylightPhaseIntensities[CurrentSkylightIntensityIndex];
 
 	UpdateSeason();
 }
@@ -222,48 +201,20 @@ void ADayCycle::Tick(float DeltaTime)
 	SunLightColor(DeltaTime);
 	SkylightIntensity(DeltaTime);
 	SunlightBloomScale(DeltaTime);
+	SunlightBloomTint(DeltaTime);
 	UpdateSunPosition();
 }
 
 void ADayCycle::SunlightIntensity(float DeltaTime)
 {
-	float TargetIntensity;
-	float LerpSpeed = 0.25f;
 
-	if (LastIntensityPhase != CurrentDayPhase)
-	{
-		LastIntensityPhase = CurrentDayPhase;
-		CurrentIntensityIndex = (CurrentIntensityIndex + 1) % PhaseIntensities.Num();
-		NextIntensityIndex = (CurrentIntensityIndex + 1) % PhaseIntensities.Num();
-		NormalizedTimeIntensity = 0.0f;
-		bInterpolateIntensity = true;
-	}
-
-	if (bInterpolateIntensity)
-	{
-		NormalizedTimeIntensity += DeltaTime * LerpSpeed;
-	}
-
-	// Phase Check
-	if (NormalizedTimeIntensity >= 1.0f)
-	{
-		NormalizedTimeIntensity = 0.0f;
-		bInterpolateIntensity = false;
-	}
-	
-	if (bInterpolateIntensity)
-	{
-		TargetIntensity = FMath::Lerp(PhaseIntensities[CurrentIntensityIndex], PhaseIntensities[NextIntensityIndex], NormalizedTimeIntensity);
-		Sunlight->Intensity = FMath::Lerp(Sunlight->Intensity, TargetIntensity, DeltaTime * LerpSpeed);
-	}
-
-	Sunlight->MarkRenderStateDirty();
 }
 
 void ADayCycle::SunLightColor(float DeltaTime)
 {
 	float LerpSpeed = 0.5f;
 	static bool bColorCycle = true;
+	static bool bFirstRun = true;
 
 	if (CurrentPhaseIndex == 0)
 	{
@@ -305,13 +256,21 @@ void ADayCycle::SunLightColor(float DeltaTime)
 		bInterpolate = true;
 	}
 
-	FLinearColor TargetColor = FLinearColor::LerpUsingHSV(PhaseColors[CurrentPhaseIndex], PhaseColors[NextPhaseIndex], NormalizedTime);
-	FLinearColor CurrentLinearColor = FLinearColor(Sunlight->LightColor);
-	FLinearColor InterpolatedColor = FLinearColor::LerpUsingHSV(CurrentLinearColor, TargetColor, DeltaTime * LerpSpeed);
+	if (bInterpolate || !bFirstRun)
+	{
+		FLinearColor TargetColor = FLinearColor::LerpUsingHSV(PhaseColors[CurrentPhaseIndex], PhaseColors[NextPhaseIndex], NormalizedTime);
+		FLinearColor CurrentLinearColor = FLinearColor(Sunlight->LightColor);
+		FLinearColor InterpolatedColor = FLinearColor::LerpUsingHSV(CurrentLinearColor, TargetColor, DeltaTime * LerpSpeed);
 
-	FColor NewColor = InterpolatedColor.ToFColor(true);
-	Sunlight->LightColor = NewColor;
-	Sunlight->MarkRenderStateDirty();
+		FColor NewColor = InterpolatedColor.ToFColor(true);
+		Sunlight->LightColor = NewColor;
+		Sunlight->MarkRenderStateDirty();
+	}
+
+	if (bFirstRun)
+	{
+		bFirstRun = false;
+	}
 }
 
 void ADayCycle::SkylightIntensity(float DeltaTime)
@@ -426,8 +385,8 @@ void ADayCycle::SunlightBloomTint(float DeltaTime)
 	FLinearColor CurrentBloomTint = Sunlight->BloomTint;
 	FLinearColor InterpolatedBloomTint = FLinearColor::LerpUsingHSV(CurrentBloomTint, TargetBloomTint, DeltaTime * LerpSpeed);
 
-	FColor NewBloomTint = InterpolatedBloomTint;
-	Sunlight->BloomTint = InterpolatedBloomTint;
+	FColor NewBloomTint = InterpolatedBloomTint.ToFColor(true);
+	Sunlight->BloomTint = NewBloomTint;
 	Sunlight->MarkRenderStateDirty();
 }
 
