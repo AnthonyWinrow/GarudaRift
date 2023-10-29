@@ -105,7 +105,6 @@ public:
 
 	TArray<FLinearColor> PhaseColors;
 	TArray<FLinearColor> BloomTints;
-	TArray<float> PhaseIntensities;
 	TArray<float> SkylightPhaseIntensities;
 	TArray<float> BloomScales;
 
@@ -150,6 +149,17 @@ public:
 	FDateTime MidnightTime;
 	FDateTime LateNightTime;
 	FDateTime CurrentTime;
+	
+	float SpringDawnDuration;
+	float SpringSunriseDuration;
+	float SummerDawnDuration;
+	float SummerSunriseDuration;
+	float AutumnDawnDuration;
+	float AutumnSunriseDuration;
+	float WinterDawnDuration;
+	float WinterSunriseDuration;
+	float CurrentDawnDuration;
+	float DawnElapsedTime;
 
 	void UpdateDayPhase();
 	void UpdateSeason();
@@ -157,6 +167,7 @@ public:
 	void UpdateSummer();
 	void UpdateAutumn();
 	void UpdateWinter();
+	void DawnDuration();
 
 	ESeason CurrentSeason;
 
