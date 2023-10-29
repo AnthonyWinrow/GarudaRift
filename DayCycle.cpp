@@ -4,10 +4,8 @@
 #include "SunPosition.h"
 #include "EngineUtils.h"
 #include "Components/SkyLightComponent.h"
-
 DECLARE_LOG_CATEGORY_EXTERN(LogDayCycle, Log, All);
 DEFINE_LOG_CATEGORY(LogDayCycle);
-
 // Sets default values
 ADayCycle::ADayCycle()
 {
@@ -44,6 +42,7 @@ ADayCycle::ADayCycle()
 	Hours = 13;
 	Minutes = 0;
 	Seconds = 0;
+	DawnElapsedTime = 0;
 	DawnTime = FDateTime(2023, 10, 9, 6, 0, 0);
 	SunriseTime = FDateTime(2023, 10, 9, 7, 0, 0);
 	MorningTime = FDateTime(2023, 10, 9, 8, 0, 0);
@@ -71,9 +70,13 @@ ADayCycle::ADayCycle()
 	Midnight = "Midnight";
 	LateNight = "Late Night";
 
+	SpringDawnDuration = 60.0f;
+	SummerDawnDuration = 60.0f;
+	AutumnDawnDuration = 120.0f;
+	WinterDawnDuration = 60.0f;
+
 	UE_LOG(LogTemp, Error, TEXT("Constructor Called_daycycle"));
 }
-
 // Called when the game starts or when spawned
 void ADayCycle::BeginPlay()
 {
@@ -113,15 +116,6 @@ void ADayCycle::BeginPlay()
 		};
 	}
 
-	if (PhaseIntensities.Num() == 0)
-	{
-		PhaseIntensities = {
-			10.0f, 400.0f, 2000.0f, 4000.0f, 120000.0f,
-			6000.0f, 3000.0f, 400.0f, 20.0f, 15.0f,
-			10.0f, 5.0f, 10.0f
-		};
-	}
-
 	if (SkylightPhaseIntensities.Num() == 0)
 	{
 		SkylightPhaseIntensities = {
@@ -132,8 +126,8 @@ void ADayCycle::BeginPlay()
 	}
 
 	UpdateSeason();
+	DawnDuration();
 }
-
 // Called every frame
 void ADayCycle::Tick(float DeltaTime)
 {
@@ -204,12 +198,36 @@ void ADayCycle::Tick(float DeltaTime)
 	SunlightBloomTint(DeltaTime);
 	UpdateSunPosition();
 }
-
 void ADayCycle::SunlightIntensity(float DeltaTime)
 {
+	//Update elapsed time
+	DawnElapsedTime += DeltaTime;
+
+	//Prevent overshooting the duration
+	if (DawnElapsedTime > CurrentDawnDuration)
+	{
+		DawnElapsedTime = CurrentDawnDuration;
+	}
+	float InterpolationFactor = DawnElapsedTime / CurrentDawnDuration;
+	float CurrentSunlightIntensity = FMath::Lerp(10.0f, 400.0f, InterpolationFactor);
+	if (Sunlight)
+	{
+		Sunlight->SetIntensity(CurrentSunlightIntensity);
+		UE_LOG(LogDayCycle, Log, TEXT("Sunlight intensity updated to: %f"), CurrentSunlightIntensity);
+	}
+	else
+	{
+		UE_LOG(LogDayCycle, Error, TEXT("Sunlight component is null. Can't update intensity"));
+	}
+
+	//Reset DawnElapsedTime if it reached the end
+	if (DawnElapsedTime >= CurrentDawnDuration)
+	{
+		DawnElapsedTime = 0.0f;
+		UE_LOG(LogDayCycle, Log, TEXT("Dawn has ended. Resetting DawnElapsedTime"));
+	}
 
 }
-
 void ADayCycle::SunLightColor(float DeltaTime)
 {
 	float LerpSpeed = 0.5f;
@@ -272,7 +290,6 @@ void ADayCycle::SunLightColor(float DeltaTime)
 		bFirstRun = false;
 	}
 }
-
 void ADayCycle::SkylightIntensity(float DeltaTime)
 {
 	float TargetIntensity;
@@ -306,7 +323,6 @@ void ADayCycle::SkylightIntensity(float DeltaTime)
 
 	Skylight->MarkRenderStateDirty();
 }
-
 void ADayCycle::SunlightBloomScale(float DeltaTime)
 {
 	float TargetBloomScale;
@@ -340,7 +356,6 @@ void ADayCycle::SunlightBloomScale(float DeltaTime)
 
 	Sunlight->MarkRenderStateDirty();
 }
-
 void ADayCycle::SunlightBloomTint(float DeltaTime)
 {
 	float LerpSpeed = 0.5f;
@@ -389,7 +404,6 @@ void ADayCycle::SunlightBloomTint(float DeltaTime)
 	Sunlight->BloomTint = NewBloomTint;
 	Sunlight->MarkRenderStateDirty();
 }
-
 void ADayCycle::UpdateSunPosition()
 {
 	FSunPositionData SunData;
@@ -398,7 +412,6 @@ void ADayCycle::UpdateSunPosition()
 
 	Sunlight->SetWorldRotation(FRotator(SunData.Elevation, SunData.Azimuth, 0));
 }
-
 void ADayCycle::UpdateSeason()
 {
 	if (Month >= 3 && Month <= 5)
@@ -418,7 +431,6 @@ void ADayCycle::UpdateSeason()
 		CurrentSeason = ESeason::Winter;
 	}
 }
-
 void ADayCycle::UpdateSpring()
 {
 	DawnTime = FDateTime(Year, Month, Day, 8, 0, 0);
@@ -435,7 +447,6 @@ void ADayCycle::UpdateSpring()
 	MidnightTime = FDateTime(Year, Month, Day, 1, 0, 0);
 	LateNightTime = FDateTime(Year, Month, Day, 3, 0, 0);
 }
-
 void ADayCycle::UpdateSummer()
 {
 	DawnTime = FDateTime(Year, Month, Day, 6, 0, 0);
@@ -452,7 +463,6 @@ void ADayCycle::UpdateSummer()
 	MidnightTime = FDateTime(Year, Month, Day, 1, 0, 0);
 	LateNightTime = FDateTime(Year, Month, Day, 2, 0, 0);
 }
-
 void ADayCycle::UpdateAutumn()
 {
 	DawnTime = FDateTime(Year, Month, Day, 7, 0, 0);
@@ -469,7 +479,6 @@ void ADayCycle::UpdateAutumn()
 	MidnightTime = FDateTime(Year, Month, Day, 23, 0, 0);
 	LateNightTime = FDateTime(Year, Month, Day, 1, 0, 0);
 }
-
 void ADayCycle::UpdateWinter()
 {
 	DawnTime = FDateTime(Year, Month, Day, 8, 0, 0);
@@ -486,7 +495,27 @@ void ADayCycle::UpdateWinter()
 	MidnightTime = FDateTime(Year, Month, Day, 21, 0, 0);
 	LateNightTime = FDateTime(Year, Month, Day, 23, 0, 0);
 }
+void ADayCycle::DawnDuration()
+{
+	if (CurrentSeason == ESeason::Spring)
+	{
+		CurrentDawnDuration = SpringDawnDuration;
+	}
+	else if (CurrentSeason == ESeason::Summer)
+	{
+		CurrentDawnDuration = SummerDawnDuration;
+	}
+	else if (CurrentSeason == ESeason::Autumn)
+	{
+		CurrentDawnDuration = AutumnDawnDuration;
+	}
+	else if (CurrentSeason == ESeason::Winter)
+	{
+		CurrentDawnDuration = WinterDawnDuration;
+	}
 
+	UE_LOG(LogDayCycle, Log, TEXT("CurrenntDawnDuration updated to %f"), CurrentDawnDuration);
+}
 void ADayCycle::UpdateDayPhase()
 {
 	int32 CurrentHour = CurrentTime.GetHour();
@@ -560,7 +589,6 @@ void ADayCycle::UpdateDayPhase()
 		UpdatePostProcessManagement();
 	}
 }
-
 void ADayCycle::UpdatePostProcessManagement()
 {
 	for (TActorIterator<APostProcessManagement> ActorItr(GetWorld()); ActorItr; ++ActorItr)
@@ -577,7 +605,6 @@ void ADayCycle::UpdatePostProcessManagement()
 		}
 	}
 }
-
 void ADayCycle::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
